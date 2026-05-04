@@ -1,0 +1,17 @@
+spring.application.name=dutchtrip
+spring.datasource.url=jdbc:mysql://localhost:3306/dutchtrip?useSSL=false&allowPublicKeyRetrieval=true&characterEncoding=UTF-8&serverTimezone=Asia/Seoul
+spring.datasource.username=
+spring.datasource.password=
+spring.datasource.driver-class-name=com.mysql.cj.jdbc.Driver
+spring.jpa.hibernate.ddl-auto=update
+spring.jpa.show-sql=true
+spring.data.redis.host=localhost
+spring.data.redis.port=6379
+server.port=8080
+# Kakao OAuth2
+kakao.client-id=YOUR_KAKAO_REST_API_KEY
+kakao.redirect-uri=http://localhost:3000/oauth/kakao
+
+# JWT
+jwt.secret=YOUR_BASE64_ENCODED_SECRET_KEY_MIN_32BYTES
+jwt.expiration=86400000
