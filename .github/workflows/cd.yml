@@ -16,8 +16,11 @@ jobs:
           username: ${{ secrets.SSH_USERNAME }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
+            export JAVA_HOME=$(/usr/libexec/java_home -v 21)
+            export PATH=$JAVA_HOME/bin:$PATH
             cd ~/Dutch-Trip-backend
-            git pull origin main
+            git fetch origin main
+            git reset --hard origin/main
             ./gradlew bootJar
             pkill -f dutchtrip || true
             nohup java -jar build/libs/*.jar > ~/app.log 2>&1 &

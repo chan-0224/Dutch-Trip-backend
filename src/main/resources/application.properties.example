@@ -15,3 +15,5 @@ kakao.redirect-uri=http://localhost:3000/oauth/kakao
 # JWT
 jwt.secret=YOUR_BASE64_ENCODED_SECRET_KEY_MIN_32BYTES
 jwt.expiration=86400000
+spring.security.user.name=
+spring.security.user.password=
