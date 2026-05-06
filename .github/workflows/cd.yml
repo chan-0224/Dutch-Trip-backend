@@ -39,10 +39,15 @@ jobs:
           host: ${{ secrets.SSH_HOST }}
           username: ${{ secrets.SSH_USERNAME }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
+          envs: GHCR_TOKEN,GHCR_ACTOR
           script: |
             export PATH="/usr/local/bin:/opt/homebrew/bin:$PATH"
+            echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_ACTOR" --password-stdin
             cd ~/Dutch-Trip-backend
             git fetch origin main
             git reset --hard origin/main
             docker pull ghcr.io/chan-0224/dutchtrip:latest
             docker-compose up -d
+        env:
+          GHCR_TOKEN: ${{ secrets.GHCR_TOKEN }}
+          GHCR_ACTOR: ${{ github.actor }}
