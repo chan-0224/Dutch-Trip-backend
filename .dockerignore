@@ -1,4 +1,5 @@
 build/
+!build/libs/*.jar
 .gradle/
 .git/
 .gitignore
