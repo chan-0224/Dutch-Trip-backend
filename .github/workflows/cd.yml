@@ -40,6 +40,7 @@ jobs:
           username: ${{ secrets.SSH_USERNAME }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
+            export PATH="/usr/local/bin:/opt/homebrew/bin:$PATH"
             cd ~/Dutch-Trip-backend
             git fetch origin main
             git reset --hard origin/main
