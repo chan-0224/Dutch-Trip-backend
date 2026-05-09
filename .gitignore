@@ -39,3 +39,7 @@ application.properties
 DEV_LOG.md
 CLAUDE.md
 .env
+
+# Infrastructure
+acme.json
+nohup.out

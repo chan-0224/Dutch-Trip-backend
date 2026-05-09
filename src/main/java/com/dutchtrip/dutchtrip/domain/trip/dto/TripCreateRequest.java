@@ -1,0 +1,23 @@
+package com.dutchtrip.dutchtrip.domain.trip.dto;
+
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import lombok.Getter;
+
+import java.time.LocalDate;
+
+@Getter
+public class TripCreateRequest {
+
+    @NotBlank
+    private String title;
+
+    @NotBlank
+    private String nation;
+
+    @NotNull
+    private LocalDate startDate;
+
+    @NotNull
+    private LocalDate endDate;
+}
