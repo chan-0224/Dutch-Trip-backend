@@ -22,10 +22,10 @@ public class UserController {
         return ResponseEntity.ok(ApiResponse.ok(userService.getMe(userId)));
     }
 
-    @PutMapping("/me")
-    public ResponseEntity<ApiResponse<UserResponse>> updateMe(
+    @PutMapping("/me/bank-info")
+    public ResponseEntity<ApiResponse<UserResponse>> updateBankInfo(
             @AuthenticationPrincipal Long userId,
             @RequestBody UserUpdateRequest request) {
-        return ResponseEntity.ok(ApiResponse.ok(userService.updateMe(userId, request)));
+        return ResponseEntity.ok(ApiResponse.ok(userService.updateBankInfo(userId, request)));
     }
 }

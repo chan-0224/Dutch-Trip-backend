@@ -4,13 +4,17 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.Getter;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Getter
 public class ScheduleCreateRequest {
 
     @NotNull
-    private LocalDateTime scheduledAt;
+    private LocalDate scheduleDate;
+
+    @NotNull
+    private LocalDateTime scheduleTime;
 
     @NotBlank
     private String title;

@@ -1,7 +1,7 @@
 package com.dutchtrip.dutchtrip.domain.auth.controller;
 
 import com.dutchtrip.dutchtrip.domain.auth.dto.KakaoLoginRequest;
-import com.dutchtrip.dutchtrip.domain.auth.dto.TokenResponse;
+import com.dutchtrip.dutchtrip.domain.auth.dto.LoginResponse;
 import com.dutchtrip.dutchtrip.domain.auth.service.AuthService;
 import com.dutchtrip.dutchtrip.global.common.ApiResponse;
 import jakarta.validation.Valid;
@@ -20,7 +20,7 @@ public class AuthController {
     private final AuthService authService;
 
     @PostMapping("/kakao")
-    public ResponseEntity<ApiResponse<TokenResponse>> kakaoLogin(
+    public ResponseEntity<ApiResponse<LoginResponse>> kakaoLogin(
             @Valid @RequestBody KakaoLoginRequest request) {
         return ResponseEntity.ok(ApiResponse.ok(authService.kakaoLogin(request)));
     }

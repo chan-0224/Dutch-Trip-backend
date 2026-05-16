@@ -2,6 +2,8 @@ package com.dutchtrip.dutchtrip.domain.trip.controller;
 
 import com.dutchtrip.dutchtrip.domain.trip.dto.JoinTripRequest;
 import com.dutchtrip.dutchtrip.domain.trip.dto.TripCreateRequest;
+import com.dutchtrip.dutchtrip.domain.trip.dto.TripListResponse;
+import com.dutchtrip.dutchtrip.domain.trip.dto.TripMemberResponse;
 import com.dutchtrip.dutchtrip.domain.trip.dto.TripResponse;
 import com.dutchtrip.dutchtrip.domain.trip.service.TripService;
 import com.dutchtrip.dutchtrip.global.common.ApiResponse;
@@ -30,9 +32,16 @@ public class TripController {
     }
 
     @GetMapping
-    public ResponseEntity<ApiResponse<List<TripResponse>>> getMyTrips(
+    public ResponseEntity<ApiResponse<List<TripListResponse>>> getMyTrips(
             @AuthenticationPrincipal Long userId) {
         return ResponseEntity.ok(ApiResponse.ok(tripService.getMyTrips(userId)));
+    }
+
+    @GetMapping("/{tripId}/members")
+    public ResponseEntity<ApiResponse<List<TripMemberResponse>>> getTripMembers(
+            @AuthenticationPrincipal Long userId,
+            @PathVariable Long tripId) {
+        return ResponseEntity.ok(ApiResponse.ok(tripService.getTripMembers(userId, tripId)));
     }
 
     @GetMapping("/{tripId}")

@@ -32,4 +32,9 @@ public class User extends BaseEntity {
         if (bankName != null) this.bankName = bankName;
         if (accountNumber != null) this.accountNumber = accountNumber;
     }
+
+    public void updateBankInfo(String bankName, String accountNumber) {
+        if (bankName != null) this.bankName = bankName;
+        if (accountNumber != null) this.accountNumber = accountNumber;
+    }
 }

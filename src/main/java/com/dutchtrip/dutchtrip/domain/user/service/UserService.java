@@ -23,9 +23,9 @@ public class UserService {
     }
 
     @Transactional
-    public UserResponse updateMe(Long userId, UserUpdateRequest request) {
+    public UserResponse updateBankInfo(Long userId, UserUpdateRequest request) {
         User user = findUser(userId);
-        user.updateProfile(request.getNickname(), request.getBankName(), request.getAccountNumber());
+        user.updateBankInfo(request.getBankName(), request.getAccountNumber());
         return UserResponse.from(user);
     }
 
