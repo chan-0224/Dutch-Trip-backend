@@ -7,5 +7,5 @@ import lombok.Getter;
 public class KakaoLoginRequest {
 
     @NotBlank
-    private String code;
+    private String kakaoAccessToken;
 }

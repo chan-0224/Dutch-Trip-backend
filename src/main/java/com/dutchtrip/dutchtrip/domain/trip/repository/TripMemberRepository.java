@@ -9,5 +9,7 @@ import java.util.List;
 
 public interface TripMemberRepository extends JpaRepository<TripMember, Long> {
     List<TripMember> findAllByUser(User user);
+    List<TripMember> findAllByTrip(Trip trip);
     boolean existsByTripAndUser(Trip trip, User user);
+    long countByTrip(Trip trip);
 }

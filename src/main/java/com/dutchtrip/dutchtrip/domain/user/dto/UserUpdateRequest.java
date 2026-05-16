@@ -5,7 +5,6 @@ import lombok.Getter;
 @Getter
 public class UserUpdateRequest {
 
-    private String nickname;
     private String bankName;
     private String accountNumber;
 }
