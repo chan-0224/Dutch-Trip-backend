@@ -37,7 +37,7 @@ public class ScheduleService {
 
         Schedule schedule = Schedule.builder()
                 .trip(trip)
-                .scheduledAt(request.getScheduledAt())
+                .scheduledAt(request.getScheduleTime())
                 .title(request.getTitle())
                 .content(request.getContent())
                 .build();

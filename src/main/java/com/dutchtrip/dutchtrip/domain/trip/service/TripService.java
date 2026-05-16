@@ -2,6 +2,8 @@ package com.dutchtrip.dutchtrip.domain.trip.service;
 
 import com.dutchtrip.dutchtrip.domain.trip.dto.JoinTripRequest;
 import com.dutchtrip.dutchtrip.domain.trip.dto.TripCreateRequest;
+import com.dutchtrip.dutchtrip.domain.trip.dto.TripListResponse;
+import com.dutchtrip.dutchtrip.domain.trip.dto.TripMemberResponse;
 import com.dutchtrip.dutchtrip.domain.trip.dto.TripResponse;
 import com.dutchtrip.dutchtrip.domain.trip.entity.Trip;
 import com.dutchtrip.dutchtrip.domain.trip.entity.TripMember;
@@ -51,11 +53,24 @@ public class TripService {
         return TripResponse.from(trip);
     }
 
-    public List<TripResponse> getMyTrips(Long userId) {
+    public List<TripListResponse> getMyTrips(Long userId) {
         User user = findUser(userId);
         return tripMemberRepository.findAllByUser(user).stream()
-                .map(TripMember::getTrip)
-                .map(TripResponse::from)
+                .map(member -> TripListResponse.from(
+                        member.getTrip(),
+                        tripMemberRepository.countByTrip(member.getTrip()),
+                        member.getRole()))
+                .toList();
+    }
+
+    public List<TripMemberResponse> getTripMembers(Long userId, Long tripId) {
+        User user = findUser(userId);
+        Trip trip = findTrip(tripId);
+        if (!tripMemberRepository.existsByTripAndUser(trip, user)) {
+            throw new CustomException(ErrorCode.NOT_TRIP_MEMBER);
+        }
+        return tripMemberRepository.findAllByTrip(trip).stream()
+                .map(TripMemberResponse::from)
                 .toList();
     }
 
