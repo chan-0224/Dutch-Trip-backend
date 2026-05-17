@@ -7,6 +7,9 @@ import com.dutchtrip.dutchtrip.domain.expense.entity.ExpenseItemParticipant;
 import com.dutchtrip.dutchtrip.domain.expense.entity.ExpenseMember;
 import com.dutchtrip.dutchtrip.domain.expense.repository.ExpenseMemberRepository;
 import com.dutchtrip.dutchtrip.domain.expense.repository.ExpenseRepository;
+import com.dutchtrip.dutchtrip.domain.trip.entity.Trip;
+import com.dutchtrip.dutchtrip.domain.trip.repository.TripMemberRepository;
+import com.dutchtrip.dutchtrip.domain.trip.repository.TripRepository;
 import com.dutchtrip.dutchtrip.domain.user.entity.User;
 import com.dutchtrip.dutchtrip.domain.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -16,11 +19,8 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.stream.Collectors;
-import jakarta.persistence.EntityManager;
 
 @Service
 @RequiredArgsConstructor
@@ -29,12 +29,13 @@ public class ExpenseService {
     private final ExpenseRepository expenseRepository;
     private final ExpenseMemberRepository expenseMemberRepository;
     private final UserRepository userRepository;
-    private final EntityManager em;
 
-    //OCR 분석 (임시 -나중에 Google Cloud Vision 코드 삽입)
+    private final TripRepository tripRepository;
+    private final TripMemberRepository tripMemberRepository;
+
+    // OCR 분석 (임시 - 나중에 Google Cloud Vision 코드 삽입)
     public ExpenseDto.OcrResponse analyzeReceipt(MultipartFile image) {
         // TODO: 구글 클라우드 Vision API 연동
-        // 지금은 테스트를 위해 더미 데이터를 반환
         return ExpenseDto.OcrResponse.builder()
                 .parsedTitle("쏨분씨푸드")
                 .parsedTotalAmount(new BigDecimal("55000"))
@@ -72,11 +73,14 @@ public class ExpenseService {
             expense.getItems().add(expenseItem);
 
             List<Long> participants = itemReq.getParticipantUserIds();
+
             if (participants == null || participants.isEmpty()) {
-                participants = em.createQuery(
-                                "SELECT tm.user.id FROM TripMember tm WHERE tm.trip.id = :tripId", Long.class)
-                        .setParameter("tripId", tripId)
-                        .getResultList();
+                Trip trip = tripRepository.findById(tripId)
+                        .orElseThrow(() -> new IllegalArgumentException("여행 정보를 찾을 수 없습니다."));
+
+                participants = tripMemberRepository.findAllByTrip(trip).stream()
+                        .map(tm -> tm.getUser().getId())
+                        .collect(Collectors.toList());
             }
 
             if (participants != null && !participants.isEmpty()) {
@@ -113,41 +117,34 @@ public class ExpenseService {
         }
     }
 
-//    @Transactional(readOnly = true)
-//    public List<ExpenseDto.SummaryResponse> getExpensesByTrip(Long tripId) {
-//        List<Expense> expenses = expenseRepository.findAllByTripIdOrderByPaymentTimeDesc(tripId);
-//
-//        return expenses.stream().map(expense -> {
-//
-//            User payer = userRepository.findById(expense.getPayerUserId()).orElseThrow();
-//
-//            return ExpenseDto.SummaryResponse.builder()
-//                    .expenseId(expense.getId())
-//                    .title(expense.getTitle())
-//                    .totalAmount(expense.getTotalAmount())
-//                    .payer(new ExpenseDto.PayerInfo(payer.getId(), payer.getNickname()))
-//                    .paymentTime(expense.getPaymentTime())
-//                    .expenseType(expense.getExpenseType())
-//                    .itemCount(expense.getItems().size())
-//                    .build();
-//        }).collect(Collectors.toList());
-//    }
-
     @Transactional(readOnly = true)
     public List<ExpenseDto.DetailResponse> getExpensesByTrip(Long tripId) {
         List<Expense> expenses = expenseRepository.findAllByTripIdOrderByPaymentTimeDesc(tripId);
 
+        Set<Long> userIds = new HashSet<>();
+        for (Expense expense : expenses) {
+            userIds.add(expense.getPayerUserId());
+            for (ExpenseItem item : expense.getItems()) {
+                for (ExpenseItemParticipant participant : item.getParticipants()) {
+                    userIds.add(participant.getUserId());
+                }
+            }
+        }
+
+        Map<Long, User> userMap = userRepository.findAllById(userIds).stream()
+                .collect(Collectors.toMap(User::getId, user -> user));
+
         return expenses.stream().map(expense -> {
 
-            User payer = userRepository.findById(expense.getPayerUserId())
-                    .orElseThrow(() -> new IllegalArgumentException("결제자 정보를 찾을 수 없습니다."));
+            User payer = userMap.get(expense.getPayerUserId());
+            if (payer == null) throw new IllegalArgumentException("결제자 정보를 찾을 수 없습니다.");
 
             List<ExpenseDto.DetailItem> detailItems = expense.getItems().stream().map(item -> {
 
                 List<ExpenseDto.PayerInfo> participants = item.getParticipants().stream()
                         .map(participant -> {
-                            User user = userRepository.findById(participant.getUserId())
-                                    .orElseThrow(() -> new IllegalArgumentException("참여자 유저 정보를 찾을 수 없습니다."));
+                            User user = userMap.get(participant.getUserId());
+                            if (user == null) throw new IllegalArgumentException("참여자 유저 정보를 찾을 수 없습니다.");
                             return new ExpenseDto.PayerInfo(user.getId(), user.getNickname());
                         })
                         .collect(Collectors.toList());
