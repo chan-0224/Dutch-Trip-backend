@@ -37,7 +37,9 @@ public class ExpenseService {
     private final TripMemberRepository tripMemberRepository;
 
     // OCR 분석 (임시 - 나중에 Google Cloud Vision 코드 삽입)
-    public ExpenseDto.OcrResponse analyzeReceipt(MultipartFile image) {
+    public ExpenseDto.OcrResponse analyzeReceipt(Long userId, Long tripId, MultipartFile image) {
+        checkMembership(tripId, userId);
+
         // TODO: 구글 클라우드 Vision API 연동
         return ExpenseDto.OcrResponse.builder()
                 .parsedTitle("쏨분씨푸드")

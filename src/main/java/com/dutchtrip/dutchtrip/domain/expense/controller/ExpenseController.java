@@ -23,7 +23,7 @@ public class ExpenseController {
             @AuthenticationPrincipal Long userId,
             @PathVariable("tripId") Long tripId,
             @RequestParam("image") MultipartFile image) {
-        ExpenseDto.OcrResponse response = expenseService.analyzeReceipt(image);
+        ExpenseDto.OcrResponse response = expenseService.analyzeReceipt(userId, tripId, image);
         return ResponseEntity.ok(ApiResponse.ok(response));
     }
 
