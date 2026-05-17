@@ -22,6 +22,9 @@ import java.math.RoundingMode;
 import java.util.*;
 import java.util.stream.Collectors;
 
+import com.dutchtrip.dutchtrip.global.exception.CustomException;
+import com.dutchtrip.dutchtrip.global.exception.ErrorCode;
+
 @Service
 @RequiredArgsConstructor
 public class ExpenseService {
@@ -47,7 +50,9 @@ public class ExpenseService {
     }
 
     @Transactional
-    public void createExpense(Long tripId, ExpenseDto.CreateRequest request) {
+    public void createExpense(Long userID, Long tripId, ExpenseDto.CreateRequest request) {
+
+        checkMembership(tripId, userID);
 
         Expense expense = Expense.builder()
                 .tripId(tripId)
@@ -76,8 +81,7 @@ public class ExpenseService {
 
             if (participants == null || participants.isEmpty()) {
                 Trip trip = tripRepository.findById(tripId)
-                        .orElseThrow(() -> new IllegalArgumentException("여행 정보를 찾을 수 없습니다."));
-
+                        .orElseThrow(() -> new CustomException(ErrorCode.TRIP_NOT_FOUND));
                 participants = tripMemberRepository.findAllByTrip(trip).stream()
                         .map(tm -> tm.getUser().getId())
                         .collect(Collectors.toList());
@@ -118,7 +122,8 @@ public class ExpenseService {
     }
 
     @Transactional(readOnly = true)
-    public List<ExpenseDto.DetailResponse> getExpensesByTrip(Long tripId) {
+    public List<ExpenseDto.DetailResponse> getExpensesByTrip(Long userId, Long tripId) {
+        checkMembership(tripId, userId);
         List<Expense> expenses = expenseRepository.findAllByTripIdOrderByPaymentTimeDesc(tripId);
 
         Set<Long> userIds = new HashSet<>();
@@ -137,14 +142,14 @@ public class ExpenseService {
         return expenses.stream().map(expense -> {
 
             User payer = userMap.get(expense.getPayerUserId());
-            if (payer == null) throw new IllegalArgumentException("결제자 정보를 찾을 수 없습니다.");
+            if (payer == null) throw new CustomException(ErrorCode.USER_NOT_FOUND);
 
             List<ExpenseDto.DetailItem> detailItems = expense.getItems().stream().map(item -> {
 
                 List<ExpenseDto.PayerInfo> participants = item.getParticipants().stream()
                         .map(participant -> {
                             User user = userMap.get(participant.getUserId());
-                            if (user == null) throw new IllegalArgumentException("참여자 유저 정보를 찾을 수 없습니다.");
+                            if (user == null) throw new CustomException(ErrorCode.USER_NOT_FOUND);
                             return new ExpenseDto.PayerInfo(user.getId(), user.getNickname());
                         })
                         .collect(Collectors.toList());
@@ -168,5 +173,15 @@ public class ExpenseService {
                     .items(detailItems)
                     .build();
         }).collect(Collectors.toList());
+    }
+    private void checkMembership(Long tripId, Long userId) {
+        Trip trip = tripRepository.findById(tripId)
+                .orElseThrow(() -> new CustomException(ErrorCode.TRIP_NOT_FOUND));
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
+
+        if (!tripMemberRepository.existsByTripAndUser(trip, user)) {
+            throw new CustomException(ErrorCode.NOT_TRIP_MEMBER);
+        }
     }
 }

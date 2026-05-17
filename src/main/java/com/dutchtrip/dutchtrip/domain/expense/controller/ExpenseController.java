@@ -32,7 +32,7 @@ public class ExpenseController {
             @AuthenticationPrincipal Long userId,
             @PathVariable("tripId") Long tripId,
             @RequestBody ExpenseDto.CreateRequest request) {
-        expenseService.createExpense(tripId, request);
+        expenseService.createExpense(userId, tripId, request);
         return ResponseEntity.ok(ApiResponse.ok(null));
     }
 
@@ -40,7 +40,7 @@ public class ExpenseController {
     public ResponseEntity<ApiResponse<List<ExpenseDto.DetailResponse>>> getExpenses(
             @AuthenticationPrincipal Long userId,
             @PathVariable("tripId") Long tripId) {
-        List<ExpenseDto.DetailResponse> response = expenseService.getExpensesByTrip(tripId);
+        List<ExpenseDto.DetailResponse> response = expenseService.getExpensesByTrip(userId, tripId);
         return ResponseEntity.ok(ApiResponse.ok(response));
     }
 }
