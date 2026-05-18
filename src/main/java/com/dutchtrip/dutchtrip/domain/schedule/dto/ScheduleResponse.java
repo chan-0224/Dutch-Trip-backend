@@ -11,7 +11,7 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 public class ScheduleResponse {
 
-    private Long id;
+    private Long scheduleId;
     private LocalDate scheduleDate;
     private LocalDateTime scheduleTime;
     private String title;

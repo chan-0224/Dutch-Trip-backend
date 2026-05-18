@@ -15,8 +15,7 @@ public class TransferResponseDto {
     private SenderInfo sender;
     private ReceiverInfo receiver;
     private BigDecimal amountToSend;
-    private String tripName;
-    private List<RelatedExpenseInfo> relatedExpenses;
+    private List<String> relatedExpenses;
 
     @Getter
     @AllArgsConstructor
@@ -32,12 +31,5 @@ public class TransferResponseDto {
         private String nickname;
         private String bankName;
         private String accountNumber;
-    }
-
-    @Getter
-    @AllArgsConstructor
-    public static class RelatedExpenseInfo {
-        private String expenseTitle;
-        private BigDecimal amount;
     }
 }
