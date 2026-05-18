@@ -23,6 +23,8 @@ public class User extends BaseEntity {
 
     private String nickname;
 
+    private String profileImageUrl;
+
     private String bankName;
 
     private String accountNumber;

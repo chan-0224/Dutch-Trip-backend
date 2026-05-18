@@ -33,6 +33,7 @@ public class AuthService {
                 .kakaoId(String.valueOf(userInfo.getId()))
                 .email(userInfo.getEmail())
                 .nickname(userInfo.getNickname())
+                .profileImageUrl(userInfo.getProfileImageUrl())
                 .build()));
 
         return new LoginResponse(jwtTokenProvider.generateToken(user.getId()), user.getId(), user.getNickname(), isNewUser);
@@ -63,6 +64,11 @@ public class AuthService {
             return kakaoAccount.getProfile().getNickname();
         }
 
+        public String getProfileImageUrl() {
+            if (kakaoAccount == null || kakaoAccount.getProfile() == null) return null;
+            return kakaoAccount.getProfile().getProfileImageUrl();
+        }
+
         @Getter
         private static class KakaoAccount {
             private String email;
@@ -71,6 +77,9 @@ public class AuthService {
             @Getter
             private static class Profile {
                 private String nickname;
+
+                @JsonProperty("profile_image_url")
+                private String profileImageUrl;
             }
         }
     }

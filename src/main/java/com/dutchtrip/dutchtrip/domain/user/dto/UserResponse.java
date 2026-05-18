@@ -11,6 +11,7 @@ public class UserResponse {
     private Long id;
     private String email;
     private String nickname;
+    private String profileImageUrl;
     private String bankName;
     private String accountNumber;
 
@@ -19,6 +20,7 @@ public class UserResponse {
                 user.getId(),
                 user.getEmail(),
                 user.getNickname(),
+                user.getProfileImageUrl(),
                 user.getBankName(),
                 user.getAccountNumber()
         );
