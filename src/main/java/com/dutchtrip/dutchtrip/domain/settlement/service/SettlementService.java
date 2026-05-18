@@ -6,9 +6,12 @@ import com.dutchtrip.dutchtrip.domain.settlement.dto.TransferResponseDto;
 import com.dutchtrip.dutchtrip.domain.settlement.dto.UserBalanceDto;
 import com.dutchtrip.dutchtrip.domain.settlement.entity.SettlementTransfer;
 import com.dutchtrip.dutchtrip.domain.settlement.repository.SettlementTransferRepository;
+import com.dutchtrip.dutchtrip.domain.trip.entity.Trip;
+import com.dutchtrip.dutchtrip.domain.trip.repository.TripRepository;
 import com.dutchtrip.dutchtrip.domain.user.entity.User;
 import com.dutchtrip.dutchtrip.domain.user.repository.UserRepository;
-import jakarta.persistence.EntityNotFoundException;
+import com.dutchtrip.dutchtrip.global.exception.CustomException;
+import com.dutchtrip.dutchtrip.global.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -27,6 +30,7 @@ public class SettlementService {
     private final ExpenseMemberRepository expenseMemberRepository;
     private final ExpenseRepository expenseRepository;
     private final UserRepository userRepository;
+    private final TripRepository tripRepository;
 
     private static class PersonBalance {
         Long userId;
@@ -82,13 +86,22 @@ public class SettlementService {
 
         settlementTransferRepository.saveAll(newTransfers);
 
+        Trip trip = tripRepository.findById(tripId)
+                .orElseThrow(() -> new CustomException(ErrorCode.TRIP_NOT_FOUND));
+
         return newTransfers.stream().map(transfer -> {
             User sender = userRepository.findById(transfer.getSenderUserId())
-                    .orElseThrow(() -> new EntityNotFoundException("Sender not found"));
+                    .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
             User receiver = userRepository.findById(transfer.getReceiverUserId())
-                    .orElseThrow(() -> new EntityNotFoundException("Receiver not found"));
+                    .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
 
-            List<String> expenseTitles = expenseRepository.findTitlesByTripIdAndUserId(tripId, sender.getId());
+            List<TransferResponseDto.RelatedExpenseInfo> relatedExpenses =
+                    expenseRepository.findExpenseInfoByTripIdAndUserId(tripId, sender.getId())
+                            .stream()
+                            .map(row -> new TransferResponseDto.RelatedExpenseInfo(
+                                    (String) row[0],
+                                    (java.math.BigDecimal) row[1]))
+                            .collect(Collectors.toList());
 
             return TransferResponseDto.builder()
                     .sender(new TransferResponseDto.SenderInfo(sender.getId(), sender.getNickname()))
@@ -98,7 +111,8 @@ public class SettlementService {
                             receiver.getBankName(),
                             receiver.getAccountNumber()))
                     .amountToSend(transfer.getAmountToSend())
-                    .relatedExpenses(expenseTitles)
+                    .tripName(trip.getTitle())
+                    .relatedExpenses(relatedExpenses)
                     .build();
         }).collect(Collectors.toList());
     }
