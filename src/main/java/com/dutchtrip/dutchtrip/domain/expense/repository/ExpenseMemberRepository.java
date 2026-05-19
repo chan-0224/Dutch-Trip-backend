@@ -6,6 +6,8 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.math.BigDecimal;
+import java.util.Collection;
 import java.util.List;
 
 public interface ExpenseMemberRepository extends JpaRepository<ExpenseMember, Long> {
@@ -17,4 +19,6 @@ public interface ExpenseMemberRepository extends JpaRepository<ExpenseMember, Lo
             "WHERE e.tripId = :tripId " +
             "GROUP BY em.userId")
     List<UserBalanceDto> findNetBalancesByTripId(@Param("tripId") Long tripId);
+
+    List<ExpenseMember> findByUserIdInAndExpenseTripIdAndAmountOwedGreaterThan(Collection<Long> userIds, Long tripId, BigDecimal amountOwed);
 }
