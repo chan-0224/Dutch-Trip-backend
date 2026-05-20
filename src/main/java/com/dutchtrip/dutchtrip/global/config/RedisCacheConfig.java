@@ -1,6 +1,5 @@
 package com.dutchtrip.dutchtrip.global.config;
 
-import tools.jackson.databind.ObjectMapper;
 import org.springframework.cache.CacheManager;
 import org.springframework.cache.annotation.EnableCaching;
 import org.springframework.context.annotation.Bean;
@@ -21,7 +20,6 @@ public class RedisCacheConfig {
     @Bean
     public CacheManager cacheManager(RedisConnectionFactory connectionFactory) {
 
-        ObjectMapper objectMapper = new ObjectMapper();
 
         RedisCacheConfiguration config = RedisCacheConfiguration.defaultCacheConfig()
                 .entryTtl(Duration.ofMinutes(10))
@@ -29,7 +27,7 @@ public class RedisCacheConfig {
                         RedisSerializationContext.SerializationPair.fromSerializer(new StringRedisSerializer())
                 )
                 .serializeValuesWith(
-                        RedisSerializationContext.SerializationPair.fromSerializer(new GenericJacksonJsonRedisSerializer(objectMapper))
+                        RedisSerializationContext.SerializationPair.fromSerializer(new GenericJacksonJsonRedisSerializer())
                 );
 
         return RedisCacheManager.RedisCacheManagerBuilder

@@ -13,6 +13,7 @@ import com.dutchtrip.dutchtrip.domain.trip.repository.TripRepository;
 import com.dutchtrip.dutchtrip.domain.user.entity.User;
 import com.dutchtrip.dutchtrip.domain.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -52,6 +53,7 @@ public class ExpenseService {
     }
 
     @Transactional
+    @CacheEvict(value = "settlements", key = "#tripId")
     public void createExpense(Long userID, Long tripId, ExpenseDto.CreateRequest request) {
 
         checkMembership(tripId, userID);

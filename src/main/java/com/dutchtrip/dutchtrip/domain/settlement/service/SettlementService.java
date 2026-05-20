@@ -13,6 +13,7 @@ import com.dutchtrip.dutchtrip.domain.user.repository.UserRepository;
 import com.dutchtrip.dutchtrip.global.exception.CustomException;
 import com.dutchtrip.dutchtrip.global.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -47,7 +48,7 @@ public class SettlementService {
     }
 
     @Transactional
-    @org.springframework.cache.annotation.Cacheable(value = "settlements", key = "#tripId")
+    @Cacheable(value = "settlements", key = "#tripId")
     public List<TransferResponseDto> calculateAndGetSettlements(Long tripId) {
 
         Trip trip = tripRepository.findById(tripId)
