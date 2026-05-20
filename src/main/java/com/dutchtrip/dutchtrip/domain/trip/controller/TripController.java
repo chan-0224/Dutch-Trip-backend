@@ -2,6 +2,7 @@ package com.dutchtrip.dutchtrip.domain.trip.controller;
 
 import com.dutchtrip.dutchtrip.domain.trip.dto.JoinTripRequest;
 import com.dutchtrip.dutchtrip.domain.trip.dto.TripCreateRequest;
+import com.dutchtrip.dutchtrip.domain.trip.dto.TripCreateResponse;
 import com.dutchtrip.dutchtrip.domain.trip.dto.TripListResponse;
 import com.dutchtrip.dutchtrip.domain.trip.dto.TripMemberResponse;
 import com.dutchtrip.dutchtrip.domain.trip.dto.TripResponse;
@@ -24,7 +25,7 @@ public class TripController {
     private final TripService tripService;
 
     @PostMapping
-    public ResponseEntity<ApiResponse<TripResponse>> createTrip(
+    public ResponseEntity<ApiResponse<TripCreateResponse>> createTrip(
             @AuthenticationPrincipal Long userId,
             @Valid @RequestBody TripCreateRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED)
