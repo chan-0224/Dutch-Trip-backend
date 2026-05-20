@@ -47,6 +47,7 @@ public class SettlementService {
     }
 
     @Transactional
+    @org.springframework.cache.annotation.Cacheable(value = "settlements", key = "#tripId")
     public List<TransferResponseDto> calculateAndGetSettlements(Long tripId) {
 
         Trip trip = tripRepository.findById(tripId)
