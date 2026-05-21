@@ -23,9 +23,10 @@ public class UserController {
     }
 
     @PutMapping("/me/bank-info")
-    public ResponseEntity<ApiResponse<UserResponse>> updateBankInfo(
+    public ResponseEntity<ApiResponse<Void>> updateBankInfo(
             @AuthenticationPrincipal Long userId,
             @RequestBody UserUpdateRequest request) {
-        return ResponseEntity.ok(ApiResponse.ok(userService.updateBankInfo(userId, request)));
+        userService.updateBankInfo(userId, request);
+        return ResponseEntity.ok(ApiResponse.ok(null, "계좌 정보가 성공적으로 업데이트되었습니다."));
     }
 }

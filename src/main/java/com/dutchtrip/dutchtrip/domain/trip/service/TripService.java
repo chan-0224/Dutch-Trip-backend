@@ -2,6 +2,7 @@ package com.dutchtrip.dutchtrip.domain.trip.service;
 
 import com.dutchtrip.dutchtrip.domain.trip.dto.JoinTripRequest;
 import com.dutchtrip.dutchtrip.domain.trip.dto.TripCreateRequest;
+import com.dutchtrip.dutchtrip.domain.trip.dto.TripCreateResponse;
 import com.dutchtrip.dutchtrip.domain.trip.dto.TripListResponse;
 import com.dutchtrip.dutchtrip.domain.trip.dto.TripMemberResponse;
 import com.dutchtrip.dutchtrip.domain.trip.dto.TripResponse;
@@ -31,7 +32,7 @@ public class TripService {
     private final UserRepository userRepository;
 
     @Transactional
-    public TripResponse createTrip(Long userId, TripCreateRequest request) {
+    public TripCreateResponse createTrip(Long userId, TripCreateRequest request) {
         User user = findUser(userId);
 
         Trip trip = Trip.builder()
@@ -50,7 +51,7 @@ public class TripService {
                 .role(TripMemberRole.OWNER)
                 .build());
 
-        return TripResponse.from(trip);
+        return TripCreateResponse.from(trip);
     }
 
     public List<TripListResponse> getMyTrips(Long userId) {
