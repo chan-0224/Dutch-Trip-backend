@@ -17,13 +17,10 @@ public class TransferResponseDto {
     private SenderInfo sender;
     private ReceiverInfo receiver;
 
-    @JsonProperty("amount_to_send")
     private BigDecimal amountToSend;
 
-    @JsonProperty("trip_name")
     private String tripName;
 
-    @JsonProperty("related_expenses")
     private List<RelatedExpenseDto> relatedExpenses;
 
     @Getter
