@@ -1,24 +1,32 @@
 package com.dutchtrip.dutchtrip.domain.settlement.service;
 
+import com.dutchtrip.dutchtrip.domain.expense.entity.ExpenseMember;
 import com.dutchtrip.dutchtrip.domain.expense.repository.ExpenseMemberRepository;
-import com.dutchtrip.dutchtrip.domain.expense.repository.ExpenseRepository;
 import com.dutchtrip.dutchtrip.domain.settlement.dto.TransferResponseDto;
 import com.dutchtrip.dutchtrip.domain.settlement.dto.UserBalanceDto;
 import com.dutchtrip.dutchtrip.domain.settlement.entity.SettlementTransfer;
 import com.dutchtrip.dutchtrip.domain.settlement.repository.SettlementTransferRepository;
+import com.dutchtrip.dutchtrip.domain.trip.entity.Trip;
+import com.dutchtrip.dutchtrip.domain.trip.repository.TripRepository;
 import com.dutchtrip.dutchtrip.domain.user.entity.User;
 import com.dutchtrip.dutchtrip.domain.user.repository.UserRepository;
 import com.dutchtrip.dutchtrip.global.exception.CustomException;
 import com.dutchtrip.dutchtrip.global.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 import java.util.PriorityQueue;
+import java.util.Set;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 @Service
 @RequiredArgsConstructor
@@ -26,8 +34,8 @@ public class SettlementService {
 
     private final SettlementTransferRepository settlementTransferRepository;
     private final ExpenseMemberRepository expenseMemberRepository;
-    private final ExpenseRepository expenseRepository;
     private final UserRepository userRepository;
+    private final TripRepository tripRepository;
 
     private static class PersonBalance {
         Long userId;
@@ -40,7 +48,12 @@ public class SettlementService {
     }
 
     @Transactional
+    @Cacheable(value = "settlements", key = "#tripId")
     public List<TransferResponseDto> calculateAndGetSettlements(Long tripId) {
+
+        Trip trip = tripRepository.findById(tripId)
+                .orElseThrow(() -> new CustomException(ErrorCode.TRIP_NOT_FOUND));
+        String tripName = trip.getTitle();
 
         settlementTransferRepository.deleteAllByTripId(tripId);
 
@@ -83,13 +96,38 @@ public class SettlementService {
 
         settlementTransferRepository.saveAll(newTransfers);
 
+        Set<Long> involvedUserIds = newTransfers.stream()
+                .flatMap(t -> Stream.of(t.getSenderUserId(), t.getReceiverUserId()))
+                .collect(Collectors.toSet());
+
+        Map<Long, User> userMap = userRepository.findAllById(involvedUserIds).stream()
+                .collect(Collectors.toMap(User::getId, user -> user));
+
+        Set<Long> senderIds = newTransfers.stream()
+                .map(SettlementTransfer::getSenderUserId)
+                .collect(Collectors.toSet());
+
+        Map<Long, List<ExpenseMember>> senderDebtsMap = expenseMemberRepository
+                .findByUserIdInAndExpenseTripIdAndAmountOwedGreaterThan(senderIds, tripId, BigDecimal.ZERO)
+                .stream()
+                .collect(Collectors.groupingBy(ExpenseMember::getUserId));
+
         return newTransfers.stream().map(transfer -> {
-            User sender = userRepository.findById(transfer.getSenderUserId())
-                    .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
-            User receiver = userRepository.findById(transfer.getReceiverUserId())
+
+            User sender = Optional.ofNullable(userMap.get(transfer.getSenderUserId()))
                     .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
 
-            List<String> relatedExpenses = expenseRepository.findTitlesByTripIdAndUserId(tripId, sender.getId());
+            User receiver = Optional.ofNullable(userMap.get(transfer.getReceiverUserId()))
+                    .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
+
+            List<ExpenseMember> senderDebts = senderDebtsMap.getOrDefault(sender.getId(), Collections.emptyList());
+
+            List<TransferResponseDto.RelatedExpenseDto> relatedExpenseDtos = senderDebts.stream()
+                    .map(debt -> TransferResponseDto.RelatedExpenseDto.builder()
+                            .expenseTitle(debt.getExpense().getTitle())
+                            .amount(debt.getAmountOwed())
+                            .build())
+                    .collect(Collectors.toList());
 
             return TransferResponseDto.builder()
                     .sender(new TransferResponseDto.SenderInfo(sender.getId(), sender.getNickname()))
@@ -99,7 +137,8 @@ public class SettlementService {
                             receiver.getBankName(),
                             receiver.getAccountNumber()))
                     .amountToSend(transfer.getAmountToSend())
-                    .relatedExpenses(relatedExpenses)
+                    .tripName(tripName)
+                    .relatedExpenses(relatedExpenseDtos)
                     .build();
         }).collect(Collectors.toList());
     }
