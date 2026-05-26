@@ -3,7 +3,6 @@ package com.dutchtrip.dutchtrip.domain.auth.controller;
 import com.dutchtrip.dutchtrip.domain.auth.dto.LoginResponse;
 import com.dutchtrip.dutchtrip.domain.user.entity.User;
 import com.dutchtrip.dutchtrip.domain.user.repository.UserRepository;
-import com.dutchtrip.dutchtrip.global.common.ApiResponse;
 import com.dutchtrip.dutchtrip.global.security.JwtTokenProvider;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Profile;
@@ -23,7 +22,7 @@ public class DevAuthController {
     private final JwtTokenProvider jwtTokenProvider;
 
     @PostMapping("/dev-login")
-    public ResponseEntity<ApiResponse<LoginResponse>> devLogin(
+    public ResponseEntity<LoginResponse> devLogin(
             @RequestParam(defaultValue = "1") Long userId) {
 
         User user = userRepository.findById(userId).orElseGet(() ->
@@ -34,7 +33,6 @@ public class DevAuthController {
                         .build()));
 
         String token = jwtTokenProvider.generateToken(user.getId());
-        return ResponseEntity.ok(ApiResponse.ok(
-                new LoginResponse(token, user.getId(), user.getNickname(), false)));
+        return ResponseEntity.ok(new LoginResponse(token, user.getId(), user.getNickname(), false));
     }
 }
