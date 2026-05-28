@@ -13,6 +13,7 @@ import com.dutchtrip.dutchtrip.domain.trip.repository.TripRepository;
 import com.dutchtrip.dutchtrip.domain.user.entity.User;
 import com.dutchtrip.dutchtrip.domain.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -26,6 +27,16 @@ import java.util.stream.Collectors;
 import com.dutchtrip.dutchtrip.global.exception.CustomException;
 import com.dutchtrip.dutchtrip.global.exception.ErrorCode;
 
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.web.client.RestTemplate;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.MediaType;
+import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.JsonNode;
+import java.util.Base64;
+
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class ExpenseService {
@@ -36,20 +47,57 @@ public class ExpenseService {
 
     private final TripRepository tripRepository;
     private final TripMemberRepository tripMemberRepository;
+    private final ObjectMapper objectMapper;
 
-    // OCR 분석 (임시 - 나중에 Google Cloud Vision 코드 삽입)
+    @Value("${gemini.api-key}")
+    private String geminiApiKey;
+
     public ExpenseDto.OcrResponse analyzeReceipt(Long userId, Long tripId, MultipartFile image) {
         checkMembership(tripId, userId);
 
-        // TODO: 구글 클라우드 Vision API 연동
-        return ExpenseDto.OcrResponse.builder()
-                .parsedTitle("쏨분씨푸드")
-                .parsedTotalAmount(new BigDecimal("55000"))
-                .parsedItems(List.of(
-                        new ExpenseDto.ParsedItem("푸팟퐁커리", new BigDecimal("30000")),
-                        new ExpenseDto.ParsedItem("창 맥주", new BigDecimal("10000"))
-                ))
-                .build();
+        try {
+            String base64Image = Base64.getEncoder().encodeToString(image.getBytes());
+            String mimeType = image.getContentType();
+
+            String prompt = "이 영수증 이미지를 분석해서 다음 형식의 순수 JSON 데이터만 반환해줘. 마크다운(` ```json `)이나 다른 설명은 절대 넣지 마.\n" +
+                    "형식: {\"parsedTitle\": \"가게이름\", \"parsedTotalAmount\": 총액숫자, \"parsedItems\": [{\"itemName\": \"메뉴명\", \"price\": 가격숫자}]}";
+
+            Map<String, Object> inlineData = Map.of(
+                    "mimeType", mimeType != null ? mimeType : "image/jpeg",
+                    "data", base64Image
+            );
+
+            Map<String, Object> requestBody = Map.of(
+                    "contents", List.of(
+                            Map.of("parts", List.of(
+                                    Map.of("text", prompt),
+                                    Map.of("inlineData", inlineData)
+                            ))
+                    )
+            );
+
+            RestTemplate restTemplate = new RestTemplate();
+            String url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash:generateContent?key=" + geminiApiKey;
+
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+
+            HttpEntity<Map<String, Object>> request = new HttpEntity<>(requestBody, headers);
+            String response = restTemplate.postForObject(url, request, String.class);
+
+            JsonNode rootNode = objectMapper.readTree(response);
+            String jsonText = rootNode.path("candidates").get(0)
+                    .path("content").path("parts").get(0)
+                    .path("text").asText();
+
+            jsonText = jsonText.replace("```json", "").replace("```", "").trim();
+
+            return objectMapper.readValue(jsonText, ExpenseDto.OcrResponse.class);
+
+        } catch (Exception e) {
+            log.error("Gemini 영수증 OCR 분석 중 오류 발생. tripId: {}, userId: {}", tripId, userId, e);
+            throw new CustomException(ErrorCode.INTERNAL_SERVER_ERROR);
+        }
     }
 
     @Transactional
