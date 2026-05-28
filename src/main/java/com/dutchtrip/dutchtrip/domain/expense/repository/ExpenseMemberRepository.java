@@ -1,5 +1,6 @@
 package com.dutchtrip.dutchtrip.domain.expense.repository;
 
+import com.dutchtrip.dutchtrip.domain.expense.entity.Expense;
 import com.dutchtrip.dutchtrip.domain.expense.entity.ExpenseMember;
 import com.dutchtrip.dutchtrip.domain.settlement.dto.UserBalanceDto;
 import org.springframework.data.jpa.repository.EntityGraph;
@@ -23,4 +24,6 @@ public interface ExpenseMemberRepository extends JpaRepository<ExpenseMember, Lo
     // TODO: N+1 문제 해결 및 정산 로직 최적화를 위해 추가된 메서드 (다음 PR에서 반영 예정)
     @EntityGraph(attributePaths = {"expense"})
     List<ExpenseMember> findByUserIdInAndExpenseTripIdAndAmountOwedGreaterThan(Collection<Long> userIds, Long tripId, BigDecimal amountOwed);
+
+    List<ExpenseMember> findAllByExpense(Expense expense);
 }
