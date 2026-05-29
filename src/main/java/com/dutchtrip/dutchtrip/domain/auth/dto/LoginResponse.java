@@ -11,6 +11,7 @@ public class LoginResponse {
     private String accessToken;
     private Long userId;
     private String nickname;
+    private String profileImageUrl;
 
     @JsonProperty("is_new_user")
     private boolean newUser;

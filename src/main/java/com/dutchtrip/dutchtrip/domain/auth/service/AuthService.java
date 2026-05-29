@@ -29,14 +29,17 @@ public class AuthService {
         Optional<User> existing = userRepository.findByKakaoId(String.valueOf(userInfo.getId()));
         boolean isNewUser = existing.isEmpty();
 
-        User user = existing.orElseGet(() -> userRepository.save(User.builder()
+        User user = existing.map(u -> {
+            u.updateKakaoProfile(userInfo.getNickname(), userInfo.getProfileImageUrl());
+            return u;
+        }).orElseGet(() -> userRepository.save(User.builder()
                 .kakaoId(String.valueOf(userInfo.getId()))
                 .email(userInfo.getEmail())
                 .nickname(userInfo.getNickname())
                 .profileImageUrl(userInfo.getProfileImageUrl())
                 .build()));
 
-        return new LoginResponse(jwtTokenProvider.generateToken(user.getId()), user.getId(), user.getNickname(), isNewUser);
+        return new LoginResponse(jwtTokenProvider.generateToken(user.getId()), user.getId(), user.getNickname(), user.getProfileImageUrl(), isNewUser);
     }
 
     private KakaoUserInfo getKakaoUserInfo(String accessToken) {
