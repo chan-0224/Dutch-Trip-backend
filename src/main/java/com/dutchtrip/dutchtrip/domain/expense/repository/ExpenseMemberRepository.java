@@ -1,5 +1,6 @@
 package com.dutchtrip.dutchtrip.domain.expense.repository;
 
+import com.dutchtrip.dutchtrip.domain.expense.entity.Expense;
 import com.dutchtrip.dutchtrip.domain.expense.entity.ExpenseMember;
 import com.dutchtrip.dutchtrip.domain.settlement.dto.UserBalanceDto;
 import org.springframework.data.jpa.repository.EntityGraph;
@@ -23,4 +24,6 @@ public interface ExpenseMemberRepository extends JpaRepository<ExpenseMember, Lo
 
     @EntityGraph(attributePaths = {"expense"})
     List<ExpenseMember> findByUserIdInAndExpenseTripIdAndAmountOwedGreaterThan(Collection<Long> userIds, Long tripId, BigDecimal amountOwed);
+
+    List<ExpenseMember> findAllByExpense(Expense expense);
 }
