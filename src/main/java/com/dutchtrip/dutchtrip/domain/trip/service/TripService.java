@@ -1,5 +1,9 @@
 package com.dutchtrip.dutchtrip.domain.trip.service;
 
+import com.dutchtrip.dutchtrip.domain.expense.entity.Expense;
+import com.dutchtrip.dutchtrip.domain.expense.entity.ExpenseMember;
+import com.dutchtrip.dutchtrip.domain.expense.repository.ExpenseMemberRepository;
+import com.dutchtrip.dutchtrip.domain.expense.repository.ExpenseRepository;
 import com.dutchtrip.dutchtrip.domain.trip.dto.JoinTripRequest;
 import com.dutchtrip.dutchtrip.domain.trip.dto.TripCreateRequest;
 import com.dutchtrip.dutchtrip.domain.trip.dto.TripCreateResponse;
@@ -19,6 +23,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.List;
 import java.util.UUID;
 
@@ -30,6 +36,8 @@ public class TripService {
     private final TripRepository tripRepository;
     private final TripMemberRepository tripMemberRepository;
     private final UserRepository userRepository;
+    private final ExpenseRepository expenseRepository;
+    private final ExpenseMemberRepository expenseMemberRepository;
 
     @Transactional
     public TripCreateResponse createTrip(Long userId, TripCreateRequest request) {
@@ -50,6 +58,26 @@ public class TripService {
                 .user(user)
                 .role(TripMemberRole.OWNER)
                 .build());
+
+        if (request.getFixedCosts() != null) {
+            for (TripCreateRequest.FixedCostRequest fc : request.getFixedCosts()) {
+                Expense expense = Expense.builder()
+                        .tripId(trip.getId())
+                        .title(fc.getTitle())
+                        .totalAmount(fc.getTotalAmount())
+                        .expenseType("고정")
+                        .payerUserId(user.getId())
+                        .build();
+                expenseRepository.save(expense);
+
+                expenseMemberRepository.save(ExpenseMember.builder()
+                        .expense(expense)
+                        .userId(user.getId())
+                        .amountPaid(fc.getTotalAmount())
+                        .amountOwed(fc.getTotalAmount())
+                        .build());
+            }
+        }
 
         return TripCreateResponse.from(trip);
     }
@@ -101,6 +129,30 @@ public class TripService {
                 .user(user)
                 .role(TripMemberRole.MEMBER)
                 .build());
+
+        List<Expense> fixedExpenses = expenseRepository.findAllByTripIdAndExpenseType(trip.getId(), "고정");
+        if (!fixedExpenses.isEmpty()) {
+            List<TripMember> allMembers = tripMemberRepository.findAllByTrip(trip);
+            int memberCount = allMembers.size();
+
+            for (Expense fixedExpense : fixedExpenses) {
+                BigDecimal perPerson = fixedExpense.getTotalAmount()
+                        .divide(new BigDecimal(memberCount), 0, RoundingMode.DOWN);
+
+                expenseMemberRepository.deleteAll(expenseMemberRepository.findAllByExpense(fixedExpense));
+
+                for (TripMember member : allMembers) {
+                    BigDecimal paid = member.getUser().getId().equals(fixedExpense.getPayerUserId())
+                            ? fixedExpense.getTotalAmount() : BigDecimal.ZERO;
+                    expenseMemberRepository.save(ExpenseMember.builder()
+                            .expense(fixedExpense)
+                            .userId(member.getUser().getId())
+                            .amountPaid(paid)
+                            .amountOwed(perPerson)
+                            .build());
+                }
+            }
+        }
 
         return TripResponse.from(trip);
     }

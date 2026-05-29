@@ -10,6 +10,8 @@ public interface ExpenseRepository extends JpaRepository<Expense, Long> {
 
     List<Expense> findAllByTripIdOrderByPaymentTimeDesc(Long tripId);
 
+    List<Expense> findAllByTripIdAndExpenseType(Long tripId, String expenseType);
+
     @Query("SELECT DISTINCT e.title FROM Expense e " +
             "JOIN ExpenseMember em ON em.expense.id = e.id " +
             "WHERE e.tripId = :tripId AND em.userId = :userId AND em.amountOwed > 0")

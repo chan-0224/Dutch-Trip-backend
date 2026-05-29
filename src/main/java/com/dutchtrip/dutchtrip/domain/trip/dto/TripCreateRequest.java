@@ -4,7 +4,9 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.Getter;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.List;
 
 @Getter
 public class TripCreateRequest {
@@ -20,4 +22,15 @@ public class TripCreateRequest {
 
     @NotNull
     private LocalDate endDate;
+
+    private List<FixedCostRequest> fixedCosts;
+
+    @Getter
+    public static class FixedCostRequest {
+        @NotBlank
+        private String title;
+
+        @NotNull
+        private BigDecimal totalAmount;
+    }
 }
