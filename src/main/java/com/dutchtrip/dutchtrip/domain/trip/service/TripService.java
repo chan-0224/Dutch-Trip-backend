@@ -49,7 +49,7 @@ public class TripService {
                 .nation(request.getNation())
                 .startDate(request.getStartDate())
                 .endDate(request.getEndDate())
-                .inviteCode(UUID.randomUUID().toString().replace("-", "").substring(0, 8).toUpperCase())
+                .inviteCode(UUID.randomUUID().toString().replace("-", "").substring(0, 6).toUpperCase())
                 .build();
         tripRepository.save(trip);
 
