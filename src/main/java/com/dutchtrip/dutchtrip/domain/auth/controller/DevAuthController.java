@@ -33,6 +33,6 @@ public class DevAuthController {
                         .build()));
 
         String token = jwtTokenProvider.generateToken(user.getId());
-        return ResponseEntity.ok(new LoginResponse(token, user.getId(), user.getNickname(), false));
+        return ResponseEntity.ok(new LoginResponse(token, user.getId(), user.getNickname(), user.getProfileImageUrl(), false));
     }
 }

@@ -39,4 +39,9 @@ public class User extends BaseEntity {
         if (bankName != null) this.bankName = bankName;
         if (accountNumber != null) this.accountNumber = accountNumber;
     }
+
+    public void updateKakaoProfile(String nickname, String profileImageUrl) {
+        if (nickname != null) this.nickname = nickname;
+        if (profileImageUrl != null) this.profileImageUrl = profileImageUrl;
+    }
 }
