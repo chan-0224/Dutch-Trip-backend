@@ -237,12 +237,15 @@ public class ExpenseService {
     }
 
     private void checkMembership(Long tripId, Long userId) {
+        log.info("[checkMembership] tripId={}, userId={}", tripId, userId);
         Trip trip = tripRepository.findById(tripId)
                 .orElseThrow(() -> new CustomException(ErrorCode.TRIP_NOT_FOUND));
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
 
-        if (!tripMemberRepository.existsByTripAndUser(trip, user)) {
+        boolean isMember = tripMemberRepository.existsByTripAndUser(trip, user);
+        log.info("[checkMembership] trip.id={}, user.id={}, isMember={}", trip.getId(), user.getId(), isMember);
+        if (!isMember) {
             throw new CustomException(ErrorCode.NOT_TRIP_MEMBER);
         }
     }
