@@ -44,14 +44,16 @@ public class ExpenseService {
     private final ExpenseRepository expenseRepository;
     private final ExpenseMemberRepository expenseMemberRepository;
     private final UserRepository userRepository;
-
     private final TripRepository tripRepository;
     private final TripMemberRepository tripMemberRepository;
+
     private final ObjectMapper objectMapper;
+    private final RestTemplate restTemplate = new RestTemplate();
 
     @Value("${gemini.api-key}")
     private String geminiApiKey;
 
+    @Transactional(readOnly = true)
     public ExpenseDto.OcrResponse analyzeReceipt(Long userId, Long tripId, MultipartFile image) {
         checkMembership(tripId, userId);
 
@@ -60,7 +62,7 @@ public class ExpenseService {
             String mimeType = image.getContentType();
 
             String prompt = "이 영수증 이미지를 분석해서 다음 형식의 순수 JSON 데이터만 반환해줘. 마크다운(` ```json `)이나 다른 설명은 절대 넣지 마.\n" +
-                    "형식: {\"parsedTitle\": \"가게이름\", \"parsedTotalAmount\": 총액숫자, \"parsedItems\": [{\"itemName\": \"메뉴명\", \"price\": 가격숫자}]}";
+                    "형식: {\"parsed_title\": \"가게이름\", \"parsed_total_amount\": 총액숫자, \"parsed_items\": [{\"item_name\": \"메뉴명\", \"price\": 가격숫자}]}";
 
             Map<String, Object> inlineData = Map.of(
                     "mimeType", mimeType != null ? mimeType : "image/jpeg",
@@ -76,7 +78,6 @@ public class ExpenseService {
                     )
             );
 
-            RestTemplate restTemplate = new RestTemplate();
             String url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash:generateContent?key=" + geminiApiKey;
 
             HttpHeaders headers = new HttpHeaders();
@@ -95,7 +96,7 @@ public class ExpenseService {
             return objectMapper.readValue(jsonText, ExpenseDto.OcrResponse.class);
 
         } catch (Exception e) {
-            log.error("Gemini 영수증 OCR 분석 중 오류 발생. tripId: {}, userId: {}", tripId, userId, e);
+            log.error("Gemini 3.1 Flash 영수증 OCR 분석 또는 JSON 파싱 중 오류 발생. tripId: {}, userId: {}", tripId, userId, e);
             throw new CustomException(ErrorCode.INTERNAL_SERVER_ERROR);
         }
     }
@@ -143,6 +144,9 @@ public class ExpenseService {
                 BigDecimal splitAmount = itemReq.getPrice().divide(
                         new BigDecimal(participants.size()), 0, RoundingMode.DOWN);
 
+                BigDecimal totalSplit = splitAmount.multiply(new BigDecimal(participants.size()));
+                BigDecimal remainder = itemReq.getPrice().subtract(totalSplit);
+
                 for (Long userId : participants) {
                     userOwedMap.put(userId, userOwedMap.getOrDefault(userId, BigDecimal.ZERO).add(splitAmount));
 
@@ -151,6 +155,11 @@ public class ExpenseService {
                             .userId(userId)
                             .build();
                     expenseItem.getParticipants().add(participantEntity);
+                }
+
+                if (remainder.compareTo(BigDecimal.ZERO) > 0) {
+                    Long payerId = request.getPayerUserId();
+                    userOwedMap.put(payerId, userOwedMap.getOrDefault(payerId, BigDecimal.ZERO).add(remainder));
                 }
             }
         }
@@ -226,6 +235,7 @@ public class ExpenseService {
                     .build();
         }).collect(Collectors.toList());
     }
+
     private void checkMembership(Long tripId, Long userId) {
         Trip trip = tripRepository.findById(tripId)
                 .orElseThrow(() -> new CustomException(ErrorCode.TRIP_NOT_FOUND));
