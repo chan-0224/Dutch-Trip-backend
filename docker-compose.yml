@@ -61,6 +61,14 @@ services:
       KAKAO_REDIRECT_URI: ${KAKAO_REDIRECT_URI}
       JWT_SECRET: ${JWT_SECRET}
       JWT_EXPIRATION: ${JWT_EXPIRATION}
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE}
+      GEMINI_API_KEY: ${GEMINI_API_KEY}
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 60s
     labels:
       - traefik.enable=true
       - traefik.http.routers.dutchtrip.rule=Host(`dutchtrip.duckdns.org`) && PathPrefix(`/api`)
