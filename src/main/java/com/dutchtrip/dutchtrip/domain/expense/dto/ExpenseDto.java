@@ -12,7 +12,6 @@ import java.util.List;
 
 public class ExpenseDto {
 
-    // 💡 역직렬화 에러 방지를 위해 @NoArgsConstructor 추가
     @Getter @Builder @AllArgsConstructor @NoArgsConstructor
     public static class OcrResponse {
         @JsonProperty("parsed_title")

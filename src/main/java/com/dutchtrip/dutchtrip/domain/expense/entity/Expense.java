@@ -48,7 +48,6 @@ public class Expense {
     @Column(name = "payer_user_id", nullable = false)
     private Long payerUserId;
 
-    // 양방향 매핑 (아이템 개수 카운트를 위해)
     @OneToMany(mappedBy = "expense", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<ExpenseItem> items = new ArrayList<>();
 
