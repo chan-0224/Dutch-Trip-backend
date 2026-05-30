@@ -62,7 +62,7 @@ public class ExpenseService {
             String mimeType = image.getContentType();
 
             String prompt = "이 영수증 이미지를 분석해서 다음 형식의 순수 JSON 데이터만 반환해줘. 마크다운(` ```json `)이나 다른 설명은 절대 넣지 마.\n" +
-                    "형식: {\"parsed_title\": \"가게이름\", \"parsed_total_amount\": 총액숫자, \"parsed_items\": [{\"item_name\": \"메뉴명\", \"price\": 가격숫자}]}";
+                    "형식: {\"parsed_title\": \"가게이름\", \"parsed_payment_time\": \"결제일시(YYYY-MM-DDTHH:mm:ss 형식, 영수증에 없으면 null)\", \"parsed_total_amount\": 총액숫자, \"parsed_items\": [{\"item_name\": \"메뉴명\", \"price\": 가격숫자}]}";
 
             Map<String, Object> inlineData = Map.of(
                     "mimeType", mimeType != null ? mimeType : "image/jpeg",
@@ -78,7 +78,7 @@ public class ExpenseService {
                     )
             );
 
-            String url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key=" + geminiApiKey;
+            String url = "[https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key=](https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key=)" + geminiApiKey;
 
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.APPLICATION_JSON);
@@ -96,7 +96,7 @@ public class ExpenseService {
             return objectMapper.readValue(jsonText, ExpenseDto.OcrResponse.class);
 
         } catch (Exception e) {
-            log.error("Gemini 3.1 Flash 영수증 OCR 분석 또는 JSON 파싱 중 오류 발생. tripId: {}, userId: {}", tripId, userId, e);
+            log.error("Gemini 영수증 OCR 분석 오류. tripId: {}, userId: {}", tripId, userId, e);
             throw new CustomException(ErrorCode.INTERNAL_SERVER_ERROR);
         }
     }
@@ -169,12 +169,93 @@ public class ExpenseService {
         for (Map.Entry<Long, BigDecimal> entry : userOwedMap.entrySet()) {
             Long userId = entry.getKey();
             BigDecimal amountOwed = entry.getValue();
-
             BigDecimal amountPaid = userId.equals(request.getPayerUserId()) ? request.getTotalAmount() : BigDecimal.ZERO;
 
             ExpenseMember member = ExpenseMember.builder()
                     .expense(expense)
                     .userId(userId)
+                    .amountPaid(amountPaid)
+                    .amountOwed(amountOwed)
+                    .build();
+            expenseMemberRepository.save(member);
+        }
+    }
+
+    @Transactional
+    @CacheEvict(value = "settlements", key = "#tripId")
+    public void updateExpense(Long userId, Long tripId, Long expenseId, ExpenseDto.CreateRequest request) {
+        checkMembership(tripId, userId);
+
+        Expense expense = expenseRepository.findById(expenseId)
+                .orElseThrow(() -> new CustomException(ErrorCode.INTERNAL_SERVER_ERROR));
+        expense.updateExpenseInfo(
+                request.getTitle(),
+                request.getTotalAmount(),
+                request.getExpenseType(),
+                request.getPaymentTime(),
+                request.getCurrency(),
+                request.getExchangeRate(),
+                request.getReceiptImageUrl(),
+                request.getPayerUserId()
+        );
+
+        expense.getItems().clear();
+        expenseMemberRepository.deleteAllByExpense(expense);
+
+        Map<Long, BigDecimal> userOwedMap = new HashMap<>();
+
+        for (ExpenseDto.ItemRequest itemReq : request.getItems()) {
+            ExpenseItem expenseItem = ExpenseItem.builder()
+                    .expense(expense)
+                    .itemName(itemReq.getItemName())
+                    .price(itemReq.getPrice())
+                    .build();
+            expense.getItems().add(expenseItem);
+
+            List<Long> participants = itemReq.getParticipantUserIds();
+
+            if (participants == null || participants.isEmpty()) {
+                Trip trip = tripRepository.findById(tripId)
+                        .orElseThrow(() -> new CustomException(ErrorCode.TRIP_NOT_FOUND));
+                participants = tripMemberRepository.findAllByTrip(trip).stream()
+                        .map(tm -> tm.getUser().getId())
+                        .collect(Collectors.toList());
+            }
+
+            if (participants != null && !participants.isEmpty()) {
+                BigDecimal splitAmount = itemReq.getPrice().divide(
+                        new BigDecimal(participants.size()), 0, RoundingMode.DOWN);
+
+                BigDecimal totalSplit = splitAmount.multiply(new BigDecimal(participants.size()));
+                BigDecimal remainder = itemReq.getPrice().subtract(totalSplit);
+
+                for (Long participantUserId : participants) {
+                    userOwedMap.put(participantUserId, userOwedMap.getOrDefault(participantUserId, BigDecimal.ZERO).add(splitAmount));
+
+                    ExpenseItemParticipant participantEntity = ExpenseItemParticipant.builder()
+                            .expenseItem(expenseItem)
+                            .userId(participantUserId)
+                            .build();
+                    expenseItem.getParticipants().add(participantEntity);
+                }
+
+                if (remainder.compareTo(BigDecimal.ZERO) > 0) {
+                    Long payerId = request.getPayerUserId();
+                    userOwedMap.put(payerId, userOwedMap.getOrDefault(payerId, BigDecimal.ZERO).add(remainder));
+                }
+            }
+        }
+
+        userOwedMap.putIfAbsent(request.getPayerUserId(), BigDecimal.ZERO);
+
+        for (Map.Entry<Long, BigDecimal> entry : userOwedMap.entrySet()) {
+            Long entryUserId = entry.getKey();
+            BigDecimal amountOwed = entry.getValue();
+            BigDecimal amountPaid = entryUserId.equals(request.getPayerUserId()) ? request.getTotalAmount() : BigDecimal.ZERO;
+
+            ExpenseMember member = ExpenseMember.builder()
+                    .expense(expense)
+                    .userId(entryUserId)
                     .amountPaid(amountPaid)
                     .amountOwed(amountOwed)
                     .build();

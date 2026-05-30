@@ -26,4 +26,6 @@ public interface ExpenseMemberRepository extends JpaRepository<ExpenseMember, Lo
     List<ExpenseMember> findByUserIdInAndExpenseTripIdAndAmountOwedGreaterThan(Collection<Long> userIds, Long tripId, BigDecimal amountOwed);
 
     List<ExpenseMember> findAllByExpense(Expense expense);
+
+    void deleteAllByExpense(Expense expense);
 }

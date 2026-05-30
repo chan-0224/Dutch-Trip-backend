@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -11,17 +12,20 @@ import java.util.List;
 
 public class ExpenseDto {
 
-    @Getter @Builder @AllArgsConstructor
+    // 💡 역직렬화 에러 방지를 위해 @NoArgsConstructor 추가
+    @Getter @Builder @AllArgsConstructor @NoArgsConstructor
     public static class OcrResponse {
         @JsonProperty("parsed_title")
         private String parsedTitle;
+        @JsonProperty("parsed_payment_time")
+        private String parsedPaymentTime;
         @JsonProperty("parsed_total_amount")
         private BigDecimal parsedTotalAmount;
         @JsonProperty("parsed_items")
         private List<ParsedItem> parsedItems;
     }
 
-    @Getter @AllArgsConstructor
+    @Getter @AllArgsConstructor @NoArgsConstructor
     public static class ParsedItem {
         @JsonProperty("item_name")
         private String itemName;

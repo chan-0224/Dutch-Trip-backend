@@ -36,6 +36,17 @@ public class ExpenseController {
         return ResponseEntity.ok(ApiResponse.ok(null));
     }
 
+    @PutMapping("/{expenseId}")
+    public ResponseEntity<ApiResponse<Void>> updateExpense(
+            @AuthenticationPrincipal Long userId,
+            @PathVariable("tripId") Long tripId,
+            @PathVariable("expenseId") Long expenseId,
+            @RequestBody ExpenseDto.CreateRequest request) {
+
+        expenseService.updateExpense(userId, tripId, expenseId, request);
+        return ResponseEntity.ok(ApiResponse.ok(null));
+    }
+
     @GetMapping
     public ResponseEntity<ApiResponse<List<ExpenseDto.DetailResponse>>> getExpenses(
             @AuthenticationPrincipal Long userId,

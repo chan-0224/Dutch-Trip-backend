@@ -66,4 +66,17 @@ public class Expense {
         this.receiptImageUrl = receiptImageUrl;
         this.payerUserId = payerUserId;
     }
+
+    public void updateExpenseInfo(String title, BigDecimal totalAmount, String expenseType,
+                                  LocalDateTime paymentTime, String currency,
+                                  BigDecimal exchangeRate, String receiptImageUrl, Long payerUserId) {
+        this.title = title;
+        this.totalAmount = totalAmount;
+        this.expenseType = expenseType;
+        this.paymentTime = paymentTime;
+        this.currency = currency;
+        this.exchangeRate = exchangeRate;
+        this.receiptImageUrl = receiptImageUrl;
+        this.payerUserId = payerUserId;
+    }
 }
