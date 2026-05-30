@@ -63,6 +63,10 @@ services:
       JWT_EXPIRATION: ${JWT_EXPIRATION}
       SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE}
       GEMINI_API_KEY: ${GEMINI_API_KEY}
+      UPLOAD_DIR: /app/uploads
+      BASE_URL: https://dutchtrip.duckdns.org
+    volumes:
+      - ./uploads:/app/uploads
     healthcheck:
       test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://localhost:8080/actuator/health"]
       interval: 30s
