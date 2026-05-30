@@ -36,6 +36,12 @@ import tools.jackson.databind.ObjectMapper;
 import tools.jackson.databind.JsonNode;
 import java.util.Base64;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.UUID;
+
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -53,13 +59,18 @@ public class ExpenseService {
     @Value("${gemini.api-key}")
     private String geminiApiKey;
 
+    @Value("${app.upload.dir}")
+    private String uploadDir;
+
+    @Value("${app.base-url}")
+    private String baseUrl;
+
     @Transactional(readOnly = true)
     public ExpenseDto.OcrResponse analyzeReceipt(Long userId, Long tripId, MultipartFile image) {
         checkMembership(tripId, userId);
 
         try {
-            // 이미지 저장 방식이 확정되면 업로드 로직 추가
-            String uploadedImageUrl = "임시_URL_업로드_방식_확정_후_수정";
+            String uploadedImageUrl = saveImageLocal(image);
 
             String base64Image = Base64.getEncoder().encodeToString(image.getBytes());
             String mimeType = image.getContentType();
@@ -353,5 +364,18 @@ public class ExpenseService {
         if (!isMember) {
             throw new CustomException(ErrorCode.NOT_TRIP_MEMBER);
         }
+    }
+    private String saveImageLocal(MultipartFile file) throws IOException {
+        String originalFilename = file.getOriginalFilename();
+        String ext = (originalFilename != null && originalFilename.contains("."))
+                ? originalFilename.substring(originalFilename.lastIndexOf("."))
+                : ".jpg";
+
+        String filename = UUID.randomUUID() + ext;
+        Path dir = Paths.get(uploadDir);
+        Files.createDirectories(dir);
+        Files.copy(file.getInputStream(), dir.resolve(filename));
+
+        return baseUrl + "/api/images/" + filename;
     }
 }
