@@ -48,7 +48,6 @@ public class Expense {
     @Column(name = "payer_user_id", nullable = false)
     private Long payerUserId;
 
-    // 양방향 매핑 (아이템 개수 카운트를 위해)
     @OneToMany(mappedBy = "expense", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<ExpenseItem> items = new ArrayList<>();
 
@@ -57,6 +56,19 @@ public class Expense {
                    LocalDateTime paymentTime, String currency, BigDecimal exchangeRate,
                    String receiptImageUrl, Long payerUserId) {
         this.tripId = tripId;
+        this.title = title;
+        this.totalAmount = totalAmount;
+        this.expenseType = expenseType;
+        this.paymentTime = paymentTime;
+        this.currency = currency;
+        this.exchangeRate = exchangeRate;
+        this.receiptImageUrl = receiptImageUrl;
+        this.payerUserId = payerUserId;
+    }
+
+    public void updateExpenseInfo(String title, BigDecimal totalAmount, String expenseType,
+                                  LocalDateTime paymentTime, String currency,
+                                  BigDecimal exchangeRate, String receiptImageUrl, Long payerUserId) {
         this.title = title;
         this.totalAmount = totalAmount;
         this.expenseType = expenseType;
