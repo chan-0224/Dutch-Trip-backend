@@ -1,10 +1,7 @@
 package com.dutchtrip.dutchtrip.domain.expense.dto;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -12,6 +9,7 @@ import java.util.List;
 
 public class ExpenseDto {
 
+    @Setter
     @Getter @Builder @AllArgsConstructor @NoArgsConstructor
     public static class OcrResponse {
         @JsonProperty("parsed_title")
@@ -20,6 +18,8 @@ public class ExpenseDto {
         private String parsedPaymentTime;
         @JsonProperty("parsed_total_amount")
         private BigDecimal parsedTotalAmount;
+        @JsonProperty("receipt_image_url")
+        private String receiptImageUrl;
         @JsonProperty("parsed_items")
         private List<ParsedItem> parsedItems;
     }
@@ -38,7 +38,7 @@ public class ExpenseDto {
         private BigDecimal totalAmount;
         @JsonProperty("expense_type")
         private String expenseType;
-        @JsonProperty("payment_time")
+        @JsonProperty("parsed_payment_time")
         private LocalDateTime paymentTime;
         private String currency;
         @JsonProperty("exchange_rate")
@@ -92,11 +92,14 @@ public class ExpenseDto {
         private BigDecimal totalAmount;
         private PayerInfo payer;
 
-        @JsonProperty("payment_time")
+        @JsonProperty("parsed_payment_time")
         private LocalDateTime paymentTime;
 
         @JsonProperty("expense_type")
         private String expenseType;
+
+        @JsonProperty("split_type")
+        private String splitType;
 
         @JsonProperty("item_count")
         private int itemCount;

@@ -29,7 +29,6 @@ public class Expense {
     @Column(name = "total_amount", nullable = false, precision = 15, scale = 2)
     private BigDecimal totalAmount;
 
-    // --- 명세서에 맞춰 추가된 필드들 ---
     @Column(name = "expense_type")
     private String expenseType;
 

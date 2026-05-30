@@ -58,6 +58,9 @@ public class ExpenseService {
         checkMembership(tripId, userId);
 
         try {
+            // 이미지 저장 방식이 확정되면 업로드 로직 추가
+            String uploadedImageUrl = "임시_URL_업로드_방식_확정_후_수정";
+
             String base64Image = Base64.getEncoder().encodeToString(image.getBytes());
             String mimeType = image.getContentType();
 
@@ -93,7 +96,10 @@ public class ExpenseService {
 
             jsonText = jsonText.replace("```json", "").replace("```", "").trim();
 
-            return objectMapper.readValue(jsonText, ExpenseDto.OcrResponse.class);
+            ExpenseDto.OcrResponse ocrResponse = objectMapper.readValue(jsonText, ExpenseDto.OcrResponse.class);
+            ocrResponse.setReceiptImageUrl(uploadedImageUrl);
+
+            return ocrResponse;
 
         } catch (Exception e) {
             log.error("Gemini 영수증 OCR 분석 오류. tripId: {}, userId: {}", tripId, userId, e);
@@ -268,6 +274,10 @@ public class ExpenseService {
         checkMembership(tripId, userId);
         List<Expense> expenses = expenseRepository.findAllByTripIdOrderByPaymentTimeDesc(tripId);
 
+        Trip trip = tripRepository.findById(tripId)
+                .orElseThrow(() -> new CustomException(ErrorCode.TRIP_NOT_FOUND));
+        int totalTripMemberCount = tripMemberRepository.findAllByTrip(trip).size();
+
         Set<Long> userIds = new HashSet<>();
         for (Expense expense : expenses) {
             userIds.add(expense.getPayerUserId());
@@ -285,6 +295,19 @@ public class ExpenseService {
 
             User payer = userMap.get(expense.getPayerUserId());
             if (payer == null) throw new CustomException(ErrorCode.USER_NOT_FOUND);
+
+            boolean isAllDutch = true;
+            if (expense.getItems().isEmpty()) {
+                isAllDutch = false;
+            } else {
+                for (ExpenseItem item : expense.getItems()) {
+                    if (item.getParticipants().size() != totalTripMemberCount) {
+                        isAllDutch = false;
+                        break;
+                    }
+                }
+            }
+            String splitType = isAllDutch ? "더치" : "개인";
 
             List<ExpenseDto.DetailItem> detailItems = expense.getItems().stream().map(item -> {
 
@@ -310,6 +333,7 @@ public class ExpenseService {
                     .payer(new ExpenseDto.PayerInfo(payer.getId(), payer.getNickname()))
                     .paymentTime(expense.getPaymentTime())
                     .expenseType(expense.getExpenseType())
+                    .splitType(splitType)
                     .itemCount(expense.getItems().size())
                     .receiptImageUrl(expense.getReceiptImageUrl())
                     .items(detailItems)
