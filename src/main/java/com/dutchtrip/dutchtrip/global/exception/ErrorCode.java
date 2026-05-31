@@ -11,6 +11,8 @@ public enum ErrorCode {
     INVALID_INVITE_CODE(HttpStatus.NOT_FOUND, "유효하지 않은 초대 코드입니다."),
     ALREADY_JOINED(HttpStatus.CONFLICT, "이미 참여 중인 여행 방입니다."),
     NOT_TRIP_MEMBER(HttpStatus.FORBIDDEN, "해당 여행 방의 멤버가 아닙니다."),
+    INVALID_FILE_TYPE(HttpStatus.BAD_REQUEST, "허용되지 않는 파일 형식입니다. (jpg, jpeg, png, gif, webp만 가능)"),
+    FILE_TOO_LARGE(HttpStatus.BAD_REQUEST, "파일 크기는 10MB를 초과할 수 없습니다."),
     INTERNAL_SERVER_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "서버 내부에 오류가 발생했습니다.");
 
     private final HttpStatus status;
