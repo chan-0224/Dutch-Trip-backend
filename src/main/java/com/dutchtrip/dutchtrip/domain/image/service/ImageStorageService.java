@@ -27,7 +27,7 @@ public class ImageStorageService {
     @Value("${app.base-url}")
     private String baseUrl;
 
-    private static final long MAX_FILE_SIZE = 5 * 1024 * 1024;
+    private static final long MAX_FILE_SIZE = 10 * 1024 * 1024;
     private static final List<String> ALLOWED_EXTENSIONS = Arrays.asList(".jpg", ".jpeg", ".png", ".webp");
 
     public String uploadImage(MultipartFile file) throws IOException {
@@ -36,7 +36,7 @@ public class ImageStorageService {
         }
 
         if (file.getSize() > MAX_FILE_SIZE) {
-            throw new IllegalArgumentException("이미지 크기는 5MB를 초과할 수 없습니다.");
+            throw new IllegalArgumentException("이미지 크기는 10MB를 초과할 수 없습니다.");
         }
 
         String originalFilename = file.getOriginalFilename();

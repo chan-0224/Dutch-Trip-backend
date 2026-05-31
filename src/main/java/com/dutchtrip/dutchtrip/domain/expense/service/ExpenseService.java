@@ -123,8 +123,7 @@ public class ExpenseService {
 
         Trip trip = tripRepository.findById(tripId)
                 .orElseThrow(() -> new CustomException(ErrorCode.TRIP_NOT_FOUND));
-        int totalTripMemberCount = tripMemberRepository.findAllByTrip(trip).size();
-
+        long totalTripMemberCount = tripMemberRepository.countByTrip(trip);
         boolean isAllDutch = true;
         if (request.getItems() == null || request.getItems().isEmpty()) {
             isAllDutch = false;
@@ -224,7 +223,7 @@ public class ExpenseService {
 
         Trip trip = tripRepository.findById(tripId)
                 .orElseThrow(() -> new CustomException(ErrorCode.TRIP_NOT_FOUND));
-        int totalTripMemberCount = tripMemberRepository.findAllByTrip(trip).size();
+        long totalTripMemberCount = tripMemberRepository.countByTrip(trip);
 
         boolean isAllDutch = true;
         if (request.getItems() == null || request.getItems().isEmpty()) {

@@ -92,7 +92,7 @@ public class ExpenseDto {
         private BigDecimal totalAmount;
         private PayerInfo payer;
 
-        @JsonProperty("parsed_payment_time")
+        @JsonProperty("payment_time")
         private LocalDateTime paymentTime;
 
         @JsonProperty("expense_type")
