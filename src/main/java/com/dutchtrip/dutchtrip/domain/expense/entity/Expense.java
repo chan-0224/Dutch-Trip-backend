@@ -32,6 +32,9 @@ public class Expense {
     @Column(name = "expense_type")
     private String expenseType;
 
+    @Column(name = "split_type")
+    private String splitType;
+
     @Column(name = "payment_time")
     private LocalDateTime paymentTime;
 
@@ -52,12 +55,14 @@ public class Expense {
 
     @Builder
     public Expense(Long tripId, String title, BigDecimal totalAmount, String expenseType,
+                   String splitType,
                    LocalDateTime paymentTime, String currency, BigDecimal exchangeRate,
                    String receiptImageUrl, Long payerUserId) {
         this.tripId = tripId;
         this.title = title;
         this.totalAmount = totalAmount;
         this.expenseType = expenseType;
+        this.splitType = splitType;
         this.paymentTime = paymentTime;
         this.currency = currency;
         this.exchangeRate = exchangeRate;
@@ -66,11 +71,13 @@ public class Expense {
     }
 
     public void updateExpenseInfo(String title, BigDecimal totalAmount, String expenseType,
+                                  String splitType,
                                   LocalDateTime paymentTime, String currency,
                                   BigDecimal exchangeRate, String receiptImageUrl, Long payerUserId) {
         this.title = title;
         this.totalAmount = totalAmount;
         this.expenseType = expenseType;
+        this.splitType = splitType;
         this.paymentTime = paymentTime;
         this.currency = currency;
         this.exchangeRate = exchangeRate;

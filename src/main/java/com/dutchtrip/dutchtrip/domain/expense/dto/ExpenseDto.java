@@ -9,15 +9,15 @@ import java.util.List;
 
 public class ExpenseDto {
 
-    @Setter
     @Getter @Builder @AllArgsConstructor @NoArgsConstructor
     public static class OcrResponse {
         @JsonProperty("parsed_title")
         private String parsedTitle;
-        @JsonProperty("parsed_payment_time")
+        @JsonProperty("payment_time")
         private String parsedPaymentTime;
         @JsonProperty("parsed_total_amount")
         private BigDecimal parsedTotalAmount;
+        @Setter
         @JsonProperty("receipt_image_url")
         private String receiptImageUrl;
         @JsonProperty("parsed_items")
@@ -38,7 +38,7 @@ public class ExpenseDto {
         private BigDecimal totalAmount;
         @JsonProperty("expense_type")
         private String expenseType;
-        @JsonProperty("parsed_payment_time")
+        @JsonProperty("payment_time")
         private LocalDateTime paymentTime;
         private String currency;
         @JsonProperty("exchange_rate")
