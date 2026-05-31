@@ -1,10 +1,7 @@
 package com.dutchtrip.dutchtrip.domain.expense.dto;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -16,10 +13,13 @@ public class ExpenseDto {
     public static class OcrResponse {
         @JsonProperty("parsed_title")
         private String parsedTitle;
-        @JsonProperty("parsed_payment_time")
+        @JsonProperty("payment_time")
         private String parsedPaymentTime;
         @JsonProperty("parsed_total_amount")
         private BigDecimal parsedTotalAmount;
+        @Setter
+        @JsonProperty("receipt_image_url")
+        private String receiptImageUrl;
         @JsonProperty("parsed_items")
         private List<ParsedItem> parsedItems;
     }
@@ -97,6 +97,9 @@ public class ExpenseDto {
 
         @JsonProperty("expense_type")
         private String expenseType;
+
+        @JsonProperty("split_type")
+        private String splitType;
 
         @JsonProperty("item_count")
         private int itemCount;

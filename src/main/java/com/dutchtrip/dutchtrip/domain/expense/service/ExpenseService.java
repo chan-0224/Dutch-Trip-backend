@@ -36,6 +36,8 @@ import tools.jackson.databind.ObjectMapper;
 import tools.jackson.databind.JsonNode;
 import java.util.Base64;
 
+import com.dutchtrip.dutchtrip.domain.image.service.ImageStorageService;
+
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -50,6 +52,8 @@ public class ExpenseService {
     private final ObjectMapper objectMapper;
     private final RestTemplate restTemplate = new RestTemplate();
 
+    private final ImageStorageService imageStorageService;
+
     @Value("${gemini.api-key}")
     private String geminiApiKey;
 
@@ -57,12 +61,16 @@ public class ExpenseService {
     public ExpenseDto.OcrResponse analyzeReceipt(Long userId, Long tripId, MultipartFile image) {
         checkMembership(tripId, userId);
 
+        String uploadedImageUrl = null;
+
         try {
+            uploadedImageUrl = imageStorageService.uploadImage(image);
+
             String base64Image = Base64.getEncoder().encodeToString(image.getBytes());
             String mimeType = image.getContentType();
 
             String prompt = "이 영수증 이미지를 분석해서 다음 형식의 순수 JSON 데이터만 반환해줘. 마크다운(` ```json `)이나 다른 설명은 절대 넣지 마.\n" +
-                    "형식: {\"parsed_title\": \"가게이름\", \"parsed_payment_time\": \"결제일시(YYYY-MM-DDTHH:mm:ss 형식, 영수증에 없으면 null)\", \"parsed_total_amount\": 총액숫자, \"parsed_items\": [{\"item_name\": \"메뉴명\", \"price\": 가격숫자}]}";
+                    "형식: {\"parsed_title\": \"가게이름\", \"payment_time\": \"결제일시(YYYY-MM-DDTHH:mm:ss 형식, 영수증에 없으면 null)\", \"parsed_total_amount\": 총액숫자, \"parsed_items\": [{\"item_name\": \"메뉴명\", \"price\": 가격숫자}]}";
 
             Map<String, Object> inlineData = Map.of(
                     "mimeType", mimeType != null ? mimeType : "image/jpeg",
@@ -79,7 +87,6 @@ public class ExpenseService {
             );
 
             String url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key=" + geminiApiKey;
-
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.APPLICATION_JSON);
 
@@ -93,10 +100,17 @@ public class ExpenseService {
 
             jsonText = jsonText.replace("```json", "").replace("```", "").trim();
 
-            return objectMapper.readValue(jsonText, ExpenseDto.OcrResponse.class);
+            ExpenseDto.OcrResponse ocrResponse = objectMapper.readValue(jsonText, ExpenseDto.OcrResponse.class);
+            ocrResponse.setReceiptImageUrl(uploadedImageUrl);
+
+            return ocrResponse;
 
         } catch (Exception e) {
             log.error("Gemini 영수증 OCR 분석 오류. tripId: {}, userId: {}", tripId, userId, e);
+            if (uploadedImageUrl != null) {
+                imageStorageService.deleteImage(uploadedImageUrl);
+            }
+
             throw new CustomException(ErrorCode.INTERNAL_SERVER_ERROR);
         }
     }
@@ -107,11 +121,31 @@ public class ExpenseService {
 
         checkMembership(tripId, userID);
 
+        Trip trip = tripRepository.findById(tripId)
+                .orElseThrow(() -> new CustomException(ErrorCode.TRIP_NOT_FOUND));
+        long totalTripMemberCount = tripMemberRepository.countByTrip(trip);
+        boolean isAllDutch = true;
+        if (request.getItems() == null || request.getItems().isEmpty()) {
+            isAllDutch = false;
+        } else {
+            for (ExpenseDto.ItemRequest itemReq : request.getItems()) {
+                List<Long> participants = itemReq.getParticipantUserIds();
+                if (participants == null || participants.isEmpty() || participants.size() == totalTripMemberCount) {
+                    continue;
+                } else {
+                    isAllDutch = false;
+                    break;
+                }
+            }
+        }
+        String splitType = isAllDutch ? "더치" : "개인";
+
         Expense expense = Expense.builder()
                 .tripId(tripId)
                 .title(request.getTitle())
                 .totalAmount(request.getTotalAmount())
                 .expenseType(request.getExpenseType())
+                .splitType(splitType)
                 .paymentTime(request.getPaymentTime())
                 .currency(request.getCurrency())
                 .exchangeRate(request.getExchangeRate())
@@ -133,8 +167,6 @@ public class ExpenseService {
             List<Long> participants = itemReq.getParticipantUserIds();
 
             if (participants == null || participants.isEmpty()) {
-                Trip trip = tripRepository.findById(tripId)
-                        .orElseThrow(() -> new CustomException(ErrorCode.TRIP_NOT_FOUND));
                 participants = tripMemberRepository.findAllByTrip(trip).stream()
                         .map(tm -> tm.getUser().getId())
                         .collect(Collectors.toList());
@@ -188,10 +220,32 @@ public class ExpenseService {
 
         Expense expense = expenseRepository.findById(expenseId)
                 .orElseThrow(() -> new CustomException(ErrorCode.INTERNAL_SERVER_ERROR));
+
+        Trip trip = tripRepository.findById(tripId)
+                .orElseThrow(() -> new CustomException(ErrorCode.TRIP_NOT_FOUND));
+        long totalTripMemberCount = tripMemberRepository.countByTrip(trip);
+
+        boolean isAllDutch = true;
+        if (request.getItems() == null || request.getItems().isEmpty()) {
+            isAllDutch = false;
+        } else {
+            for (ExpenseDto.ItemRequest itemReq : request.getItems()) {
+                List<Long> participants = itemReq.getParticipantUserIds();
+                if (participants == null || participants.isEmpty() || participants.size() == totalTripMemberCount) {
+                    continue;
+                } else {
+                    isAllDutch = false;
+                    break;
+                }
+            }
+        }
+        String splitType = isAllDutch ? "더치" : "개인";
+
         expense.updateExpenseInfo(
                 request.getTitle(),
                 request.getTotalAmount(),
                 request.getExpenseType(),
+                splitType,
                 request.getPaymentTime(),
                 request.getCurrency(),
                 request.getExchangeRate(),
@@ -215,8 +269,6 @@ public class ExpenseService {
             List<Long> participants = itemReq.getParticipantUserIds();
 
             if (participants == null || participants.isEmpty()) {
-                Trip trip = tripRepository.findById(tripId)
-                        .orElseThrow(() -> new CustomException(ErrorCode.TRIP_NOT_FOUND));
                 participants = tripMemberRepository.findAllByTrip(trip).stream()
                         .map(tm -> tm.getUser().getId())
                         .collect(Collectors.toList());
@@ -286,6 +338,7 @@ public class ExpenseService {
             User payer = userMap.get(expense.getPayerUserId());
             if (payer == null) throw new CustomException(ErrorCode.USER_NOT_FOUND);
 
+
             List<ExpenseDto.DetailItem> detailItems = expense.getItems().stream().map(item -> {
 
                 List<ExpenseDto.PayerInfo> participants = item.getParticipants().stream()
@@ -310,6 +363,7 @@ public class ExpenseService {
                     .payer(new ExpenseDto.PayerInfo(payer.getId(), payer.getNickname()))
                     .paymentTime(expense.getPaymentTime())
                     .expenseType(expense.getExpenseType())
+                    .splitType(expense.getSplitType())
                     .itemCount(expense.getItems().size())
                     .receiptImageUrl(expense.getReceiptImageUrl())
                     .items(detailItems)
