@@ -49,6 +49,16 @@ services:
       - "6379:6379"
     restart: unless-stopped
 
+  front:
+    image: ghcr.io/seohyun012/dutch-trip-front:latest
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.dutchtrip-front.rule=Host(`dutchtrip.duckdns.org`) && !PathPrefix(`/api`)
+      - traefik.http.routers.dutchtrip-front.entrypoints=websecure
+      - traefik.http.routers.dutchtrip-front.tls.certresolver=letsencrypt
+      - traefik.http.services.dutchtrip-front.loadbalancer.server.port=3000
+    restart: unless-stopped
+
   app:
     image: ghcr.io/chan-0224/dutchtrip:latest
     environment:
