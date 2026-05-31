@@ -51,6 +51,12 @@ services:
 
   front:
     image: ghcr.io/seohyun012/dutch-trip-front:latest
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://localhost:3000"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 60s
     labels:
       - traefik.enable=true
       - traefik.http.routers.dutchtrip-front.rule=Host(`dutchtrip.duckdns.org`) && !PathPrefix(`/api`)
