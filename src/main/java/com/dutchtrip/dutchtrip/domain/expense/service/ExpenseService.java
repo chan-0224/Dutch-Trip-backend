@@ -130,7 +130,7 @@ public class ExpenseService {
         } else {
             for (ExpenseDto.ItemRequest itemReq : request.getItems()) {
                 List<Long> participants = itemReq.getParticipantUserIds();
-                if (participants == null || participants.isEmpty() || participants.size() == totalTripMemberCount) {
+                if (participants != null && participants.size() >= 2) {
                     continue;
                 } else {
                     isAllDutch = false;
@@ -167,9 +167,7 @@ public class ExpenseService {
             List<Long> participants = itemReq.getParticipantUserIds();
 
             if (participants == null || participants.isEmpty()) {
-                participants = tripMemberRepository.findAllByTrip(trip).stream()
-                        .map(tm -> tm.getUser().getId())
-                        .collect(Collectors.toList());
+                participants = Collections.singletonList(request.getPayerUserId());
             }
 
             if (participants != null && !participants.isEmpty()) {
@@ -231,7 +229,7 @@ public class ExpenseService {
         } else {
             for (ExpenseDto.ItemRequest itemReq : request.getItems()) {
                 List<Long> participants = itemReq.getParticipantUserIds();
-                if (participants == null || participants.isEmpty() || participants.size() == totalTripMemberCount) {
+                if (participants != null && participants.size() >= 2) {
                     continue;
                 } else {
                     isAllDutch = false;
@@ -269,9 +267,7 @@ public class ExpenseService {
             List<Long> participants = itemReq.getParticipantUserIds();
 
             if (participants == null || participants.isEmpty()) {
-                participants = tripMemberRepository.findAllByTrip(trip).stream()
-                        .map(tm -> tm.getUser().getId())
-                        .collect(Collectors.toList());
+                participants = Collections.singletonList(request.getPayerUserId());
             }
 
             if (participants != null && !participants.isEmpty()) {

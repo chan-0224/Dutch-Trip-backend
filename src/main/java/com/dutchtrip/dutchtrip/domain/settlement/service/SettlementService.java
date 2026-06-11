@@ -100,9 +100,6 @@ public class SettlementService {
                 .flatMap(t -> Stream.of(t.getSenderUserId(), t.getReceiverUserId()))
                 .collect(Collectors.toSet());
 
-        Map<Long, User> userMap = userRepository.findAllById(involvedUserIds).stream()
-                .collect(Collectors.toMap(User::getId, user -> user));
-
         Set<Long> senderIds = newTransfers.stream()
                 .map(SettlementTransfer::getSenderUserId)
                 .collect(Collectors.toSet());
@@ -111,6 +108,15 @@ public class SettlementService {
                 .findByUserIdInAndExpenseTripIdAndAmountOwedGreaterThan(senderIds, tripId, BigDecimal.ZERO)
                 .stream()
                 .collect(Collectors.groupingBy(ExpenseMember::getUserId));
+
+        Set<Long> allPayerIds = senderDebtsMap.values().stream()
+                .flatMap(List::stream)
+                .map(em -> em.getExpense().getPayerUserId())
+                .collect(Collectors.toSet());
+        involvedUserIds.addAll(allPayerIds);
+
+        Map<Long, User> userMap = userRepository.findAllById(involvedUserIds).stream()
+                .collect(Collectors.toMap(User::getId, user -> user));
 
         return newTransfers.stream().map(transfer -> {
 
@@ -121,12 +127,20 @@ public class SettlementService {
                     .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
 
             List<ExpenseMember> senderDebts = senderDebtsMap.getOrDefault(sender.getId(), Collections.emptyList());
-
             List<TransferResponseDto.RelatedExpenseDto> relatedExpenseDtos = senderDebts.stream()
-                    .map(debt -> TransferResponseDto.RelatedExpenseDto.builder()
-                            .expenseTitle(debt.getExpense().getTitle())
-                            .amount(debt.getAmountOwed())
-                            .build())
+                    .map(debt -> {
+                        User payer = userMap.get(debt.getExpense().getPayerUserId());
+                        String payerName = (payer != null) ? payer.getNickname() : "알 수 없음";
+
+                        return TransferResponseDto.RelatedExpenseDto.builder()
+                                .expenseId(debt.getExpense().getId())
+                                .expenseTitle(debt.getExpense().getTitle())
+                                .amount(debt.getAmountOwed())
+                                .expenseType(debt.getExpense().getExpenseType())
+                                .payerNickname(payerName)
+                                .paymentTime(debt.getExpense().getPaymentTime())
+                                .build();
+                    })
                     .collect(Collectors.toList());
 
             return TransferResponseDto.builder()
