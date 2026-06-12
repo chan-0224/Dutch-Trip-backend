@@ -175,11 +175,13 @@ public class ExpenseService {
     }
 
     private String determineSplitType(List<ExpenseDto.ItemRequest> items) {
-        if (items == null || items.isEmpty()) return "개인";
+        if (items == null || items.isEmpty()) return "더치";
+
         for (ExpenseDto.ItemRequest itemReq : items) {
             List<Long> participants = itemReq.getParticipantUserIds();
 
             if (participants == null || participants.isEmpty() || participants.size() >= 2) {
+                continue;
             } else {
                 return "개인";
             }
@@ -189,30 +191,26 @@ public class ExpenseService {
 
     private void saveExpenseItems(ExpenseDto.CreateRequest request, Expense expense, Trip trip) {
         Map<Long, BigDecimal> userOwedMap = new HashMap<>();
+        List<ExpenseDto.ItemRequest> items = request.getItems();
 
-        for (ExpenseDto.ItemRequest itemReq : request.getItems()) {
+        if (items == null || items.isEmpty()) {
+            List<Long> allMembers = tripMemberRepository.findAllByTrip(trip).stream()
+                    .map(tm -> tm.getUser().getId())
+                    .collect(Collectors.toList());
+
+            BigDecimal splitAmount = request.getTotalAmount().divide(
+                    new BigDecimal(allMembers.size()), 0, RoundingMode.DOWN);
+            BigDecimal totalSplit = splitAmount.multiply(new BigDecimal(allMembers.size()));
+            BigDecimal remainder = request.getTotalAmount().subtract(totalSplit);
+
             ExpenseItem expenseItem = ExpenseItem.builder()
                     .expense(expense)
-                    .itemName(itemReq.getItemName())
-                    .price(itemReq.getPrice())
+                    .itemName(request.getTitle())
+                    .price(request.getTotalAmount())
                     .build();
             expense.getItems().add(expenseItem);
 
-            List<Long> participants = itemReq.getParticipantUserIds();
-
-            if (participants == null || participants.isEmpty()) {
-                participants = tripMemberRepository.findAllByTrip(trip).stream()
-                        .map(tm -> tm.getUser().getId())
-                        .collect(Collectors.toList());
-            }
-
-            BigDecimal splitAmount = itemReq.getPrice().divide(
-                    new BigDecimal(participants.size()), 0, RoundingMode.DOWN);
-
-            BigDecimal totalSplit = splitAmount.multiply(new BigDecimal(participants.size()));
-            BigDecimal remainder = itemReq.getPrice().subtract(totalSplit);
-
-            for (Long participantUserId : participants) {
+            for (Long participantUserId : allMembers) {
                 userOwedMap.put(participantUserId, userOwedMap.getOrDefault(participantUserId, BigDecimal.ZERO).add(splitAmount));
 
                 ExpenseItemParticipant participantEntity = ExpenseItemParticipant.builder()
@@ -225,6 +223,44 @@ public class ExpenseService {
             if (remainder.compareTo(BigDecimal.ZERO) > 0) {
                 Long payerId = request.getPayerUserId();
                 userOwedMap.put(payerId, userOwedMap.getOrDefault(payerId, BigDecimal.ZERO).add(remainder));
+            }
+        }
+        else {
+            for (ExpenseDto.ItemRequest itemReq : items) {
+                ExpenseItem expenseItem = ExpenseItem.builder()
+                        .expense(expense)
+                        .itemName(itemReq.getItemName())
+                        .price(itemReq.getPrice())
+                        .build();
+                expense.getItems().add(expenseItem);
+
+                List<Long> participants = itemReq.getParticipantUserIds();
+
+                if (participants == null || participants.isEmpty()) {
+                    participants = tripMemberRepository.findAllByTrip(trip).stream()
+                            .map(tm -> tm.getUser().getId())
+                            .collect(Collectors.toList());
+                }
+
+                BigDecimal splitAmount = itemReq.getPrice().divide(
+                        new BigDecimal(participants.size()), 0, RoundingMode.DOWN);
+                BigDecimal totalSplit = splitAmount.multiply(new BigDecimal(participants.size()));
+                BigDecimal remainder = itemReq.getPrice().subtract(totalSplit);
+
+                for (Long participantUserId : participants) {
+                    userOwedMap.put(participantUserId, userOwedMap.getOrDefault(participantUserId, BigDecimal.ZERO).add(splitAmount));
+
+                    ExpenseItemParticipant participantEntity = ExpenseItemParticipant.builder()
+                            .expenseItem(expenseItem)
+                            .userId(participantUserId)
+                            .build();
+                    expenseItem.getParticipants().add(participantEntity);
+                }
+
+                if (remainder.compareTo(BigDecimal.ZERO) > 0) {
+                    Long payerId = request.getPayerUserId();
+                    userOwedMap.put(payerId, userOwedMap.getOrDefault(payerId, BigDecimal.ZERO).add(remainder));
+                }
             }
         }
 
