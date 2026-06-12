@@ -123,22 +123,8 @@ public class ExpenseService {
 
         Trip trip = tripRepository.findById(tripId)
                 .orElseThrow(() -> new CustomException(ErrorCode.TRIP_NOT_FOUND));
-        long totalTripMemberCount = tripMemberRepository.countByTrip(trip);
-        boolean isAllDutch = true;
-        if (request.getItems() == null || request.getItems().isEmpty()) {
-            isAllDutch = false;
-        } else {
-            for (ExpenseDto.ItemRequest itemReq : request.getItems()) {
-                List<Long> participants = itemReq.getParticipantUserIds();
-                if (participants == null || participants.isEmpty() || participants.size() == totalTripMemberCount) {
-                    continue;
-                } else {
-                    isAllDutch = false;
-                    break;
-                }
-            }
-        }
-        String splitType = isAllDutch ? "더치" : "개인";
+
+        String splitType = determineSplitType(request.getItems());
 
         Expense expense = Expense.builder()
                 .tripId(tripId)
@@ -154,63 +140,7 @@ public class ExpenseService {
                 .build();
         expenseRepository.save(expense);
 
-        Map<Long, BigDecimal> userOwedMap = new HashMap<>();
-
-        for (ExpenseDto.ItemRequest itemReq : request.getItems()) {
-            ExpenseItem expenseItem = ExpenseItem.builder()
-                    .expense(expense)
-                    .itemName(itemReq.getItemName())
-                    .price(itemReq.getPrice())
-                    .build();
-            expense.getItems().add(expenseItem);
-
-            List<Long> participants = itemReq.getParticipantUserIds();
-
-            if (participants == null || participants.isEmpty()) {
-                participants = tripMemberRepository.findAllByTrip(trip).stream()
-                        .map(tm -> tm.getUser().getId())
-                        .collect(Collectors.toList());
-            }
-
-            if (participants != null && !participants.isEmpty()) {
-                BigDecimal splitAmount = itemReq.getPrice().divide(
-                        new BigDecimal(participants.size()), 0, RoundingMode.DOWN);
-
-                BigDecimal totalSplit = splitAmount.multiply(new BigDecimal(participants.size()));
-                BigDecimal remainder = itemReq.getPrice().subtract(totalSplit);
-
-                for (Long userId : participants) {
-                    userOwedMap.put(userId, userOwedMap.getOrDefault(userId, BigDecimal.ZERO).add(splitAmount));
-
-                    ExpenseItemParticipant participantEntity = ExpenseItemParticipant.builder()
-                            .expenseItem(expenseItem)
-                            .userId(userId)
-                            .build();
-                    expenseItem.getParticipants().add(participantEntity);
-                }
-
-                if (remainder.compareTo(BigDecimal.ZERO) > 0) {
-                    Long payerId = request.getPayerUserId();
-                    userOwedMap.put(payerId, userOwedMap.getOrDefault(payerId, BigDecimal.ZERO).add(remainder));
-                }
-            }
-        }
-
-        userOwedMap.putIfAbsent(request.getPayerUserId(), BigDecimal.ZERO);
-
-        for (Map.Entry<Long, BigDecimal> entry : userOwedMap.entrySet()) {
-            Long userId = entry.getKey();
-            BigDecimal amountOwed = entry.getValue();
-            BigDecimal amountPaid = userId.equals(request.getPayerUserId()) ? request.getTotalAmount() : BigDecimal.ZERO;
-
-            ExpenseMember member = ExpenseMember.builder()
-                    .expense(expense)
-                    .userId(userId)
-                    .amountPaid(amountPaid)
-                    .amountOwed(amountOwed)
-                    .build();
-            expenseMemberRepository.save(member);
-        }
+        saveExpenseItems(request, expense, trip);
     }
 
     @Transactional
@@ -223,23 +153,8 @@ public class ExpenseService {
 
         Trip trip = tripRepository.findById(tripId)
                 .orElseThrow(() -> new CustomException(ErrorCode.TRIP_NOT_FOUND));
-        long totalTripMemberCount = tripMemberRepository.countByTrip(trip);
 
-        boolean isAllDutch = true;
-        if (request.getItems() == null || request.getItems().isEmpty()) {
-            isAllDutch = false;
-        } else {
-            for (ExpenseDto.ItemRequest itemReq : request.getItems()) {
-                List<Long> participants = itemReq.getParticipantUserIds();
-                if (participants == null || participants.isEmpty() || participants.size() == totalTripMemberCount) {
-                    continue;
-                } else {
-                    isAllDutch = false;
-                    break;
-                }
-            }
-        }
-        String splitType = isAllDutch ? "더치" : "개인";
+        String splitType = determineSplitType(request.getItems());
 
         expense.updateExpenseInfo(
                 request.getTitle(),
@@ -256,6 +171,23 @@ public class ExpenseService {
         expense.getItems().clear();
         expenseMemberRepository.deleteAllByExpense(expense);
 
+        saveExpenseItems(request, expense, trip);
+    }
+
+    private String determineSplitType(List<ExpenseDto.ItemRequest> items) {
+        if (items == null || items.isEmpty()) return "개인";
+        for (ExpenseDto.ItemRequest itemReq : items) {
+            List<Long> participants = itemReq.getParticipantUserIds();
+
+            if (participants == null || participants.isEmpty() || participants.size() >= 2) {
+            } else {
+                return "개인";
+            }
+        }
+        return "더치";
+    }
+
+    private void saveExpenseItems(ExpenseDto.CreateRequest request, Expense expense, Trip trip) {
         Map<Long, BigDecimal> userOwedMap = new HashMap<>();
 
         for (ExpenseDto.ItemRequest itemReq : request.getItems()) {
@@ -274,27 +206,25 @@ public class ExpenseService {
                         .collect(Collectors.toList());
             }
 
-            if (participants != null && !participants.isEmpty()) {
-                BigDecimal splitAmount = itemReq.getPrice().divide(
-                        new BigDecimal(participants.size()), 0, RoundingMode.DOWN);
+            BigDecimal splitAmount = itemReq.getPrice().divide(
+                    new BigDecimal(participants.size()), 0, RoundingMode.DOWN);
 
-                BigDecimal totalSplit = splitAmount.multiply(new BigDecimal(participants.size()));
-                BigDecimal remainder = itemReq.getPrice().subtract(totalSplit);
+            BigDecimal totalSplit = splitAmount.multiply(new BigDecimal(participants.size()));
+            BigDecimal remainder = itemReq.getPrice().subtract(totalSplit);
 
-                for (Long participantUserId : participants) {
-                    userOwedMap.put(participantUserId, userOwedMap.getOrDefault(participantUserId, BigDecimal.ZERO).add(splitAmount));
+            for (Long participantUserId : participants) {
+                userOwedMap.put(participantUserId, userOwedMap.getOrDefault(participantUserId, BigDecimal.ZERO).add(splitAmount));
 
-                    ExpenseItemParticipant participantEntity = ExpenseItemParticipant.builder()
-                            .expenseItem(expenseItem)
-                            .userId(participantUserId)
-                            .build();
-                    expenseItem.getParticipants().add(participantEntity);
-                }
+                ExpenseItemParticipant participantEntity = ExpenseItemParticipant.builder()
+                        .expenseItem(expenseItem)
+                        .userId(participantUserId)
+                        .build();
+                expenseItem.getParticipants().add(participantEntity);
+            }
 
-                if (remainder.compareTo(BigDecimal.ZERO) > 0) {
-                    Long payerId = request.getPayerUserId();
-                    userOwedMap.put(payerId, userOwedMap.getOrDefault(payerId, BigDecimal.ZERO).add(remainder));
-                }
+            if (remainder.compareTo(BigDecimal.ZERO) > 0) {
+                Long payerId = request.getPayerUserId();
+                userOwedMap.put(payerId, userOwedMap.getOrDefault(payerId, BigDecimal.ZERO).add(remainder));
             }
         }
 
@@ -337,7 +267,6 @@ public class ExpenseService {
 
             User payer = userMap.get(expense.getPayerUserId());
             if (payer == null) throw new CustomException(ErrorCode.USER_NOT_FOUND);
-
 
             List<ExpenseDto.DetailItem> detailItems = expense.getItems().stream().map(item -> {
 

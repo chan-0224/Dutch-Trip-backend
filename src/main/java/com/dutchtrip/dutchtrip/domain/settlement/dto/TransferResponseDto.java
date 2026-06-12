@@ -7,6 +7,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Getter
@@ -47,8 +48,17 @@ public class TransferResponseDto {
     @AllArgsConstructor
     @NoArgsConstructor
     public static class RelatedExpenseDto {
+        @JsonProperty("expense_id")
+        private Long expenseId;
         @JsonProperty("expense_title")
         private String expenseTitle;
+        @JsonProperty("amount")
         private BigDecimal amount;
+        @JsonProperty("expense_type")
+        private String expenseType;
+        @JsonProperty("payer_nickname")
+        private String payerNickname;
+        @JsonProperty("payment_time")
+        private LocalDateTime paymentTime;
     }
 }
