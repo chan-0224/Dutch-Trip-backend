@@ -51,6 +51,7 @@ services:
 
   front:
     image: ghcr.io/seohyun012/dutch-trip-front:latest
+    profiles: ["front"]
     labels:
       - traefik.enable=true
       - traefik.http.routers.dutchtrip-front.rule=Host(`dutchtrip.duckdns.org`) && !PathPrefix(`/api`)
