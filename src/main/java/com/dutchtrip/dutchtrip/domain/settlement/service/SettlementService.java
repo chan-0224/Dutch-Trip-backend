@@ -99,6 +99,7 @@ public class SettlementService {
         Set<Long> involvedUserIds = newTransfers.stream()
                 .flatMap(t -> Stream.of(t.getSenderUserId(), t.getReceiverUserId()))
                 .collect(Collectors.toSet());
+        balances.forEach(b -> involvedUserIds.add(b.getUserId()));
 
         Set<Long> senderIds = newTransfers.stream()
                 .map(SettlementTransfer::getSenderUserId)
