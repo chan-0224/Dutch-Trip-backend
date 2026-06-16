@@ -124,7 +124,10 @@ public class ExpenseService {
         Trip trip = tripRepository.findById(tripId)
                 .orElseThrow(() -> new CustomException(ErrorCode.TRIP_NOT_FOUND));
 
-        String splitType = determineSplitType(request.getItems());
+        String splitType = request.getSplitType();
+        if (splitType == null || splitType.trim().isEmpty()) {
+            splitType = "더치";
+        }
 
         Expense expense = Expense.builder()
                 .tripId(tripId)
@@ -154,7 +157,10 @@ public class ExpenseService {
         Trip trip = tripRepository.findById(tripId)
                 .orElseThrow(() -> new CustomException(ErrorCode.TRIP_NOT_FOUND));
 
-        String splitType = determineSplitType(request.getItems());
+        String splitType = request.getSplitType();
+        if (splitType == null || splitType.trim().isEmpty()) {
+            splitType = "더치";
+        }
 
         expense.updateExpenseInfo(
                 request.getTitle(),
@@ -172,21 +178,6 @@ public class ExpenseService {
         expenseMemberRepository.deleteAllByExpense(expense);
 
         saveExpenseItems(request, expense, trip);
-    }
-
-    private String determineSplitType(List<ExpenseDto.ItemRequest> items) {
-        if (items == null || items.isEmpty()) return "더치";
-
-        for (ExpenseDto.ItemRequest itemReq : items) {
-            List<Long> participants = itemReq.getParticipantUserIds();
-
-            if (participants == null || participants.isEmpty() || participants.size() >= 2) {
-                continue;
-            } else {
-                return "개인";
-            }
-        }
-        return "더치";
     }
 
     private void saveExpenseItems(ExpenseDto.CreateRequest request, Expense expense, Trip trip) {

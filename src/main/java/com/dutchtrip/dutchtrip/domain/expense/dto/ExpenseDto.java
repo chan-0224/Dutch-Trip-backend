@@ -38,6 +38,8 @@ public class ExpenseDto {
         private BigDecimal totalAmount;
         @JsonProperty("expense_type")
         private String expenseType;
+        @JsonProperty("split_type")
+        private String splitType;
         @JsonProperty("payment_time")
         private LocalDateTime paymentTime;
         private String currency;
